@@ -1,0 +1,50 @@
+prisma/
+├── public/                 <-- (JSONs estáticos, iconos PWA, favicon)
+│   ├── api/
+│   │   ├── dashboard.json
+│   │   └── ... (aquí irán los demás JSON)
+│   └── icons/
+│       ├── icon-192x192.png
+│       └── icon-512x512.png
+│
+├── src/
+│   ├── assets/             <-- Logos, imágenes (ej. foto de la landing page)
+│   │
+│   ├── components/         <-- Componentes REUTILIZABLES
+│   │   ├── common/         <-- Ej: Button.tsx, Input.tsx, Card.tsx
+│   │   ├── icons/          <-- Svg como componentes (ej: HomeIcon.tsx)
+│   │   └── ui/             <-- Componentes más complejos (ej: StatsCard.tsx)
+│   │
+│   ├── hooks/              <-- Hooks personalizados
+│   │   └── useFetch.ts     <-- (Lo usaremos para leer los JSON)
+│   │
+│   ├── layouts/            <-- Plantillas de página
+│   │   ├── DashboardLayout.tsx  <-- (El layout con el menú lateral del mockup)
+│   │   └── AuthLayout.tsx       <-- (El layout para Login/Registro)
+│   │
+│   ├── pages/              <-- Las vistas principales (tus 15 puntos)
+│   │   ├── Landing.tsx     <-- (El mockup 1: Landing Page)
+│   │   ├── auth/           <-- Flujo de registro
+│   │   │   └── StoreRegistration.tsx  <-- (El mockup 2: Formulario de registro)
+│   │   │
+│   │   ├── store-panel/    <-- Panel de Comercio (Puntos 1-8)
+│   │   │   ├── StoreDashboard.tsx   <-- (El mockup 3: Dashboard de negocio)
+│   │   │   ├── StoreProducts.tsx
+│   │   │   └── StoreOrders.tsx
+│   │   │
+│   │   └── admin-panel/    <-- Panel Admin General (Puntos 9-15)
+│   │       ├── AdminDashboard.tsx
+│   │       └── AdminManageStores.tsx
+│   │
+│   ├── services/           <-- Lógica para conectar datos
+│   │   └── api.ts          <-- (Aquí pondremos las funciones fetch())
+│   │
+│   ├── types/              <-- Nuestras definiciones de TypeScript
+│   │   └── index.ts        <-- (Ej: interface Product, interface Store)
+│   │
+│   ├── App.tsx             <-- Aquí vivirá el Router (React Router)
+│   ├── main.tsx            <-- (Punto de entrada, no se toca)
+│   └── index.css           <-- (Ya configurado con Tailwind)
+│
+├── tailwind.config.js      <-- (Ya creado)
+├── vite.config.ts          <-- (Ya creado y configurado para PWA)
