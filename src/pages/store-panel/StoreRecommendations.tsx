@@ -1,7 +1,7 @@
 // FileName: StoreRecommendations.tsx
 // Path: src/pages/store-panel/StoreRecommendations.tsx
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Card from "../../components/common/Card";
 import Button from "../../components/common/Button";
 import { Link } from 'react-router-dom';
@@ -11,7 +11,8 @@ import {
     ArrowTrendingUpIcon, 
     ArrowTrendingDownIcon,
     TagIcon,
-    ChartBarIcon
+    ChartBarIcon,
+    CheckCircleIcon
 } from '@heroicons/react/20/solid';
 
 // --- ¡NUEVO! Tipo de Recomendación ---
@@ -63,7 +64,6 @@ const LineChartPlaceholder = () => (
 
 // --- ¡NUEVO! Componente de Tarjeta de Recomendación ---
 const RecommendationCard = ({ rec, onApply }: { rec: Recommendation, onApply: (id: number) => void }) => {
-    
     let icon, iconBg, buttonText, buttonVariant;
 
     switch (rec.type) {
@@ -101,7 +101,7 @@ const RecommendationCard = ({ rec, onApply }: { rec: Recommendation, onApply: (i
                         <Button 
                             size="sm" 
                             variant={buttonVariant as 'primary' | 'secondary'}
-                            onClick={() => onApply(rec.id)} // ¡Acción "wow"!
+                            onClick={() => onApply(rec.id)}
                         >
                             {buttonText}
                         </Button>
@@ -112,34 +112,24 @@ const RecommendationCard = ({ rec, onApply }: { rec: Recommendation, onApply: (i
     );
 };
 
-
 const StoreRecommendationsPage = () => {
-    // --- ¡NUEVO! Estado para manejar la lista de recomendaciones ---
     const [recommendations, setRecommendations] = useState(mockRecommendations);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
-    // Simulación de carga de API
     useEffect(() => {
         setIsLoading(true);
         setError(null);
-        // Aquí llamarías a: GET /web/stores/mine/recommendations
         setTimeout(() => {
             setRecommendations(mockRecommendations);
             setIsLoading(false);
-        }, 1000); // Simula 1 segundo de carga
+        }, 1000);
     }, []);
 
-    // --- ¡NUEVO! Función para la interacción "wow" ---
     const handleApplyRecommendation = (id: number) => {
-        // Simula que se "aplica" la recomendación quitándola de la lista
         setRecommendations(prevRecs => prevRecs.filter(rec => rec.id !== id));
-        
-        // (En un futuro, si el botón es "Crear Promoción", haríamos:)
-        // navigate('/tienda/promociones/nueva?producto_id=...&tipo=...');
     };
 
-    // --- Lógica de Renderizado ---
     const renderContent = () => {
         if (isLoading) {
             return (
@@ -155,7 +145,7 @@ const StoreRecommendationsPage = () => {
         
         if (recommendations.length === 0) {
             return (
-                 <Card className="text-center p-12 bg-green-50 border-green-200">
+                <Card className="text-center p-12 bg-green-50 border-green-200">
                     <CheckCircleIcon className="w-12 h-12 text-green-600 mx-auto" />
                     <h3 className="font-semibold text-lg text-green-800 mt-4">¡Todo Optimizado!</h3>
                     <p className="text-sm text-green-700 mt-1">No hay nuevas recomendaciones por ahora. ¡Buen trabajo!</p>
@@ -177,43 +167,30 @@ const StoreRecommendationsPage = () => {
     };
 
     return (
-        // ¡Ya no se envuelve en el Layout!
-        <>
-            {/* Layout de 2 columnas */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-
-                {/* Columna Izquierda: Feed de Recomendaciones */}
-                <div className="lg:col-span-2">
-                    <h2 className="text-xl font-bold text-text-main mb-4">Bandeja de Entrada de IA</h2>
-                    {renderContent()}
-                </div>
-
-                {/* Columna Derecha: Gráficos de Soporte */}
-                <div className="lg:col-span-1 space-y-6">
-                    <Card title="Predicción de Demanda (Simulado)">
-                        <p className="text-text-muted text-sm mb-4">Ventas esperadas para la próxima semana (basado en tendencias).</p>
-                        <LineChartPlaceholder />
-                    </Card>
-                    <Card title="Productos con Baja Rotación">
-                        <p className="text-text-muted text-sm mb-4">Estos productos no se han vendido en los últimos 30 días.</p>
-                        <ul className="space-y-2 text-sm">
-                            <li className="flex justify-between"><span>Juego de Desarmadores</span> <span className="font-semibold text-red-600">0 ventas</span></li>
-                            <li className="flex justify-between"><span>Clavos (Caja 1kg)</span> <span className="font-semibold text-red-600">0 ventas</span></li>
-                        </ul>
-                        <Button 
-                            variant="secondary" 
-                            size="sm" 
-                            className="w-full mt-4"
-                            // Este botón te llevaría a la página de Promociones
-                        >
-                            <TagIcon className="w-4 h-4" />
-                            Crear Promoción
-                        </Button>
-                    </Card>
-                </div>
-
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="lg:col-span-2">
+                <h2 className="text-xl font-bold text-text-main mb-4">Bandeja de Entrada de IA</h2>
+                {renderContent()}
             </div>
-        </>
+            <div className="lg:col-span-1 space-y-6">
+                <Card title="Predicción de Demanda (Simulado)">
+                    <p className="text-text-muted text-sm mb-4">Ventas esperadas para la próxima semana (basado en tendencias).</p>
+                    <LineChartPlaceholder />
+                </Card>
+                <Card title="Productos con Baja Rotación">
+                    <p className="text-text-muted text-sm mb-4">Estos productos no se han vendido en los últimos 30 días.</p>
+                    <ul className="space-y-2 text-sm">
+                        <li className="flex justify-between"><span>Juego de Desarmadores</span> <span className="font-semibold text-red-600">0 ventas</span></li>
+                        <li className="flex justify-between"><span>Clavos (Caja 1kg)</span> <span className="font-semibold text-red-600">0 ventas</span></li>
+                    </ul>
+                    <Button variant="secondary" size="sm" className="w-full mt-4">
+                        <TagIcon className="w-4 h-4" />
+                        Crear Promoción
+                    </Button>
+                </Card>
+            </div>
+        </div>
     );
 };
+
 export default StoreRecommendationsPage;

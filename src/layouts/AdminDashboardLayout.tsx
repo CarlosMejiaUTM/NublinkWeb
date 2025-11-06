@@ -5,6 +5,7 @@ import React, { useState, useEffect } from 'react';
 import { NavLink, useNavigate, Link } from 'react-router-dom';
 import nublinkLogoUrl from '../assets/nublink-logo.png'; // Asegúrate que la ruta sea correcta
 import type { User } from '../types';
+import ConfirmModal from '../components/common/ConfirmModal';
 
 // --- ¡MEJORA! Iconos SVG Profesionales (Heroicons - Solid) ---
 // Estos reemplazan los emojis y le dan un look "wow"
@@ -19,72 +20,101 @@ const SupportIcon = () => <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2
 const LogoutIcon = () => <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M12 9l-3 3m0 0l3 3m-3-3h12.75" /></svg>;
 // --- Fin Iconos ---
 
-// --- ¡NUEVO! Avatar Profesional ---
+// --- Avatar Profesional ---
 const UserAvatar = ({ name }: { name: string }) => {
-    const initial = name ? name.charAt(0).toUpperCase() : 'A';
-    return (
-        <div className="w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center font-semibold flex-shrink-0 border-2 border-primary-light/50 shadow-sm">
-            {initial}
-        </div>
-    );
+  const initial = name ? name.charAt(0).toUpperCase() : 'A';
+  return (
+    <div className="w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center font-semibold flex-shrink-0 border-2 border-primary-light/50 shadow-sm">
+      {initial}
+    </div>
+  );
 };
 
-const AdminDashboardLayout = ({ children, pageTitle, pageDescription }: { children: React.ReactNode; pageTitle: string; pageDescription?: string }) => {
-  // --- ¡MEJORA! Estilo de link activo rediseñado ---
-  const navLinkClasses = ({ isActive }: { isActive: boolean }) =>
-    `flex items-center gap-3 px-4 py-2.5 rounded-lg transition-all duration-200 ease-in-out ${
-      isActive 
-        ? 'bg-secondary text-primary' // Activo
-        : 'text-text-muted hover:bg-secondary hover:text-text-main hover:translate-x-1' // Inactivo
-    }`;
+const AdminDashboardLayout = ({
+  children,
+  pageTitle,
+  pageDescription,
+}: {
+  children: React.ReactNode;
+  pageTitle: string;
+  pageDescription?: string;
+}) => {
+  const navigate = useNavigate();
 
   const [userName, setUserName] = useState('');
   const [userRole, setUserRole] = useState('');
   const [userInitial, setUserInitial] = useState('');
   const [userEmail, setUserEmail] = useState('');
-
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
-  const navigate = useNavigate();
+
+  // 🔹 Estado del modal
+  const [modalState, setModalState] = useState<'confirm' | 'success' | 'error' | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  const navLinkClasses = ({ isActive }: { isActive: boolean }) =>
+    `flex items-center gap-3 px-4 py-2.5 rounded-lg transition-all duration-200 ease-in-out ${
+      isActive
+        ? 'bg-secondary text-primary'
+        : 'text-text-muted hover:bg-secondary hover:text-text-main hover:translate-x-1'
+    }`;
 
   useEffect(() => {
     const name = localStorage.getItem('userName') || 'Admin';
     const role = (localStorage.getItem('userRole') as User['role']) || 'superadmin';
     const email = localStorage.getItem('userEmail') || 'admin@nublink.com';
-    
+
     setUserName(name);
     setUserInitial(name.charAt(0).toUpperCase());
     setUserEmail(email);
     setUserRole(role === 'superadmin' ? 'Modo Super Admin' : 'Modo Administrador');
   }, []);
-  
-  const handleLogout = () => {
-    console.log("Cerrando sesión de Admin...");
-    localStorage.clear();
-    navigate('/login');
+
+  // --- Cerrar sesión ---
+  const handleLogout = async () => {
+    try {
+      console.log('🔹 Cerrando sesión...');
+      localStorage.clear();
+
+      // Simulamos un pequeño retraso (API o limpieza de sesión)
+      await new Promise((res) => setTimeout(res, 1000));
+
+      setModalState('success');
+      setTimeout(() => {
+        setIsModalOpen(false);
+        navigate('/login');
+      }, 1200);
+    } catch (error) {
+      console.error('❌ Error al cerrar sesión:', error);
+      setModalState('error');
+      setTimeout(() => setIsModalOpen(false), 1500);
+    }
   };
 
   return (
-    <div className="flex h-screen bg-bg-base font-sans">
-      {/* Sidebar de Admin */}
-      <aside className="w-64 bg-surface flex-shrink-0 border-r border-line-light p-4 flex flex-col justify-between">
-        <div>
+    <>
+      <div className="flex h-screen bg-bg-base font-sans">
+        {/* Sidebar */}
+        <aside className="w-64 bg-surface flex-shrink-0 border-r border-line-light p-4 flex flex-col justify-between">
+          <div>
             {/* Logo */}
             <Link to="/admin/dashboard" className="flex items-center gap-2 mb-8 px-2">
-                <img src={nublinkLogoUrl} alt="Nublink Logo" className="h-8 w-auto" />
-                <div className="text-xl font-bold text-text-main">Nublink</div>
+              <img src={nublinkLogoUrl} alt="Nublink Logo" className="h-8 w-auto" />
+              <div className="text-xl font-bold text-text-main">Nublink</div>
             </Link>
-            
-            {/* Perfil de Usuario en Sidebar */}
+
+            {/* Perfil */}
             <div className="p-3 bg-secondary rounded-xl flex items-center gap-3 mb-6">
-                <UserAvatar name={userName} />
-                <div>
-                    <p className="font-semibold text-sm text-text-main truncate">¡Hola, {userName}!</p>
-                    <p className="text-xs text-text-muted">{userRole}</p>
-                </div>
+              <UserAvatar name={userName} />
+              <div>
+                <p className="font-semibold text-sm text-text-main truncate">
+                  ¡Hola, {userName}!
+                </p>
+                <p className="text-xs text-text-muted">{userRole}</p>
+              </div>
             </div>
-            
-            {/* Navegación de Admin */}
-            <nav>
+
+            {/* Navegación */}
+           <nav>
               <ul className="space-y-1.5">
                 <li><NavLink to="/admin/dashboard" className={navLinkClasses} end><HomeIcon /> <span>Dashboard</span></NavLink></li>
                 <li><NavLink to="/admin/tiendas" className={navLinkClasses}><StoreIcon /> <span>Gestionar Tiendas</span></NavLink></li>
@@ -95,74 +125,110 @@ const AdminDashboardLayout = ({ children, pageTitle, pageDescription }: { childr
                 <li><NavLink to="/admin/soporte" className={navLinkClasses}><SupportIcon /> <span>Soporte</span></NavLink></li>
               </ul>
             </nav>
-        </div>
-        <div className="mt-auto border-t border-line-light pt-4">
-            <NavLink to="/admin/configuracion" className={navLinkClasses}>
-                <SettingsIcon /> <span>Configuración</span>
-            </NavLink>
-        </div>
-      </aside>
+          </div>
 
-      {/* Main Content */}
-      <div className="flex-1 flex flex-col overflow-hidden">
-        {/* --- ¡MEJORA! Header con 'backdrop-blur' --- */}
-        <header className="bg-surface/95 backdrop-blur-sm border-b border-line-light px-6 py-4 flex justify-between items-center sticky top-0 z-10">
-             <div className="flex flex-col">
-                 <h1 className="text-2xl font-bold text-text-main">{pageTitle}</h1>
-                 {pageDescription && <p className="text-sm text-text-muted mt-1">{pageDescription}</p>}
-             </div>
+          <div className="mt-auto border-t border-line-light pt-4">
+            <li><NavLink to="/admin/sopoconfiguracionrte" className={navLinkClasses}><SettingsIcon /> <span>Configuración</span></NavLink></li>
+          </div>
+        </aside>
 
-             {/* --- ¡MEJORA! Perfil Clickable y Menú Desplegable --- */}
-             <div className="flex items-center gap-4 relative">
-                <nav className="hidden md:flex items-center gap-6 text-sm font-medium text-text-muted">
-                    <a href="#" className="hover:text-primary">Docs</a>
-                    <a href="#" className="hover:text-primary">API</a>
-                </nav>
-                <button 
-                  onClick={() => setIsProfileMenuOpen(prev => !prev)} 
-                  className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center text-text-main font-semibold cursor-pointer border border-line-light focus:outline-none focus:ring-2 focus:ring-primary"
-                >
-                    {userInitial || '?'}
-                </button>
+        {/* Contenido Principal */}
+        <div className="flex-1 flex flex-col overflow-hidden">
+          <header className="bg-surface/95 backdrop-blur-sm border-b border-line-light px-6 py-4 flex justify-between items-center sticky top-0 z-10">
+            <div className="flex flex-col">
+              <h1 className="text-2xl font-bold text-text-main">{pageTitle}</h1>
+              {pageDescription && (
+                <p className="text-sm text-text-muted mt-1">{pageDescription}</p>
+              )}
+            </div>
 
-                {/* Menú Desplegable con Animación */}
-                <div 
-                    className={`
-                      absolute top-14 right-0 w-64 bg-surface rounded-xl shadow-xl border border-line-light z-20 py-2
-                      transition-all duration-150 ease-in-out
-                      ${isProfileMenuOpen ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none'}
-                    `}
-                    onMouseLeave={() => setIsProfileMenuOpen(false)}
-                >
-                    <div className="px-4 py-3 border-b border-line-light">
-                        <p className="font-semibold text-sm text-text-main truncate">{userName}</p>
-                        <p className="text-xs text-text-muted truncate">{userEmail}</p>
-                    </div>
-                    <div className="p-1">
-                        <NavLink 
-                          to="/admin/configuracion" 
-                          className="block w-full text-left px-3 py-2 text-sm text-text-muted hover:bg-secondary hover:text-text-main rounded-md transition-colors" 
-                          onClick={() => setIsProfileMenuOpen(false)}
-                        >
-                            Configuración
-                        </NavLink>
-                        <button 
-                            onClick={handleLogout}
-                            className="group flex items-center gap-2 w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-md transition-colors"
-                        >
-                            <LogoutIcon className="w-5 h-5 text-red-500" />
-                            <span>Cerrar Sesión</span>
-                        </button>
-                    </div>
+            {/* Perfil */}
+            <div className="flex items-center gap-4 relative">
+              <nav className="hidden md:flex items-center gap-6 text-sm font-medium text-text-muted">
+                <a href="#" className="hover:text-primary">
+                  Docs
+                </a>
+                <a href="#" className="hover:text-primary">
+                  API
+                </a>
+              </nav>
+              <button
+                onClick={() => setIsProfileMenuOpen((prev) => !prev)}
+                className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center text-text-main font-semibold cursor-pointer border border-line-light focus:outline-none focus:ring-2 focus:ring-primary"
+              >
+                {userInitial || '?'}
+              </button>
+
+              {/* Menú perfil */}
+              <div
+                className={`absolute top-14 right-0 w-64 bg-surface rounded-xl shadow-xl border border-line-light z-20 py-2 transition-all duration-150 ease-in-out ${
+                  isProfileMenuOpen
+                    ? 'opacity-100 scale-100'
+                    : 'opacity-0 scale-95 pointer-events-none'
+                }`}
+                onMouseLeave={() => setIsProfileMenuOpen(false)}
+              >
+                <div className="px-4 py-3 border-b border-line-light">
+                  <p className="font-semibold text-sm text-text-main truncate">{userName}</p>
+                  <p className="text-xs text-text-muted truncate">{userEmail}</p>
                 </div>
-                {/* --- Fin del Dropdown --- */}
-             </div>
-        </header>
-        <main className="flex-1 overflow-x-hidden overflow-y-auto p-6 md:p-8">
-          {children}
-        </main>
+                <div className="p-1">
+                  <NavLink
+                    to="/admin/configuracion"
+                    className="block w-full text-left px-3 py-2 text-sm text-text-muted hover:bg-secondary hover:text-text-main rounded-md transition-colors"
+                    onClick={() => setIsProfileMenuOpen(false)}
+                  >
+                    Configuración
+                  </NavLink>
+                  <button
+                    onClick={() => {
+                      setIsProfileMenuOpen(false);
+                      setModalState('confirm');
+                      setIsModalOpen(true);
+                    }}
+                    className="group flex items-center gap-2 w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-md transition-colors"
+                  >
+                    <LogoutIcon className="w-5 h-5 text-red-500" />
+                    <span>Cerrar Sesión</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </header>
+
+          <main className="flex-1 overflow-x-hidden overflow-y-auto p-6 md:p-8">
+            {children}
+          </main>
+        </div>
       </div>
-    </div>
+
+      {/* 🔹 Modal Confirmación / Éxito / Error */}
+      {modalState && (
+        <ConfirmModal
+          isOpen={isModalOpen}
+          title={
+            modalState === 'success'
+              ? '¡Sesión cerrada!'
+              : modalState === 'error'
+              ? 'Error al cerrar sesión'
+              : '¿Cerrar sesión?'
+          }
+          message={
+            modalState === 'success'
+              ? 'Has cerrado sesión correctamente.'
+              : modalState === 'error'
+              ? 'Ocurrió un error al intentar cerrar sesión.'
+              : 'Tu sesión se cerrará y volverás al inicio de sesión.'
+          }
+          confirmText="Sí, cerrar"
+          cancelText="Cancelar"
+          onConfirm={handleLogout}
+          onCancel={() => setIsModalOpen(false)}
+          state={modalState === 'success' ? 'success' : 'confirm'}
+          type={modalState}
+        />
+      )}
+    </>
   );
 };
 

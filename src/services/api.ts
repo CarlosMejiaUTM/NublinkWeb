@@ -158,46 +158,85 @@ export const getStoreProducts = async (): Promise<Product[]> => {
   }
 };
 
-// ¡¡REAL!! (Endpoint actualizado)
-export const getStoreProfile = async (): Promise<User> => { // Devuelve el objeto User completo
-  const PROFILE_ENDPOINT = '/web/stores/mine/profile-with-store'; // <-- Endpoint REAL
-  try {
-    const user: User = await fetchWithAuth(PROFILE_ENDPOINT, { method: 'GET' });
-    
-    // --- ¡CAMBIO IMPORTANTE! ---
-    // Ya NO lanzamos un error aquí. Simplemente devolvemos el usuario.
-    // ProtectedRoute se encargará de decidir qué hacer si (user.store) es null.
-    /*
-    if (!user.store) {
-      throw new Error("Este usuario no tiene una tienda asociada.");
-    }
-    */
-    
-    return user; // Devuelve el usuario (tenga o no tienda)
-  } catch (error) {
-    console.error("Fallo al obtener perfil de tienda:", error);
-    if (error instanceof Error) throw new Error(error.message);
-    throw new Error("No se pudo cargar el perfil de la tienda.");
-  }
+// --- GET PROFILE ---
+export const getStoreProfile = async (): Promise<Partial<User & Store>> => {
+  const PROFILE_ENDPOINT = '/web/stores/mine/profile-with-store';
+  try {
+    const response = await fetchWithAuth(PROFILE_ENDPOINT, { method: 'GET' });
+    
+    if (!response?.ok || !response.data) throw new Error("No se pudo obtener el perfil");
+
+    const userData: User & { store: Store | null } = response.data;
+
+    // --- Normalizar null → undefined ---
+    const normalize = (obj: any) => {
+      const result: any = {};
+      Object.keys(obj).forEach(key => {
+        result[key] = obj[key] === null ? undefined : obj[key];
+      });
+      return result;
+    };
+
+    const combinedData = { ...normalize(userData.store || {}), ...normalize(userData) };
+    delete combinedData.store;
+
+    return combinedData;
+
+  } catch (error) {
+    console.error("Fallo al obtener perfil de tienda:", error);
+    if (error instanceof Error) throw new Error(error.message);
+    throw new Error("No se pudo cargar el perfil de la tienda.");
+  }
 };
 
-// ¡¡REAL!! (Endpoint actualizado)
-export const updateStoreProfile = async (data: Partial<Store & User>): Promise<User> => { // Acepta y devuelve User
-  const UPDATE_ENDPOINT = `/web/stores/mine/profile-with-store`; // <-- Endpoint REAL
-  console.log("Actualizando perfil de tienda:", data);
-  try {
-    const updatedUser: User = await fetchWithAuth(UPDATE_ENDPOINT, {
-      method: 'PATCH', // <-- CAMBIO A PATCH (como en tu API)
-      body: JSON.stringify(data) // Envía los campos a actualizar
-    });
-    return updatedUser;
-  } catch (error) {
-    console.error("Fallo al actualizar perfil de tienda:", error);
-    if (error instanceof Error) throw new Error(error.message);
-    throw new Error("No se pudo actualizar el perfil.");
-  }
-};
+// ✅ FUNCIÓN API CORREGIDA - COPIA ESTO EN TU api.ts
 
+export const updateStoreProfile = async (data: Partial<Store & User>): Promise<User> => {
+  const UPDATE_ENDPOINT = `/web/stores/mine/profile-with-store`;
+  
+  // Limpiar los datos antes de enviar - solo campos editables
+  const cleanData = {
+    // Campos de usuario
+    ...(data.name && { name: data.name }),
+    ...(data.phone && { phone: data.phone }),
+    
+    // Campos de tienda
+    ...(data.business_name && { business_name: data.business_name }),
+    ...(data.owner_name && { owner_name: data.owner_name }),
+    ...(data.address && { address: data.address }),
+    ...(data.description !== undefined && { description: data.description }),
+    ...(data.latitude !== undefined && { latitude: data.latitude }),
+    ...(data.longitude !== undefined && { longitude: data.longitude }),
+  };
+  
+  try {
+    const response = await fetchWithAuth(UPDATE_ENDPOINT, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(cleanData)
+    });
+
+
+    
+    // Verificar que la respuesta tenga datos
+    if (!response) {
+      throw new Error("El servidor no devolvió datos");
+    }
+    
+    return response;
+    
+  } catch (error) {
+    console.error("❌ [API] Error completo:", error);
+    
+    if (error instanceof Error) {
+      throw error;
+    }
+    
+    throw new Error("No se pudo actualizar el perfil.");
+  }
+};
 // ¡¡REAL!!
 export const getStoreSubscription = async (): Promise<any> => {
   const SUBSCRIPTION_ENDPOINT = '/web/stores/mine/subscription';
