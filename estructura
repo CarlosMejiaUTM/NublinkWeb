@@ -1,50 +1,65 @@
 prisma/
-├── public/                 <-- (JSONs estáticos, iconos PWA, favicon)
-│   ├── api/
-│   │   ├── dashboard.json
-│   │   └── ... (aquí irán los demás JSON)
-│   └── icons/
+├── public/                 # (Archivos estáticos, accesibles desde /)
+│   └── icons/              # (Iconos de la PWA)
 │       ├── icon-192x192.png
 │       └── icon-512x512.png
 │
-├── src/
-│   ├── assets/             <-- Logos, imágenes (ej. foto de la landing page)
+├── src/                    # (Código fuente de React)
+│   ├── assets/             # (Imágenes, logos)
+│   │   └── nublink-logo.png  # (Tu logo)
 │   │
-│   ├── components/         <-- Componentes REUTILIZABLES
-│   │   ├── common/         <-- Ej: Button.tsx, Input.tsx, Card.tsx
-│   │   ├── icons/          <-- Svg como componentes (ej: HomeIcon.tsx)
-│   │   └── ui/             <-- Componentes más complejos (ej: StatsCard.tsx)
+│   ├── components/         # (Componentes Reutilizables)
+│   │   └── common/         # (Tu Kit de UI "Premium")
+│   │       ├── Button.tsx
+│   │       ├── Card.tsx
+│   │       ├── Input.tsx
+│   │       ├── LocationPickerMap.tsx  # (El mapa de Leaflet)
+│   │       ├── PaymentForm.tsx        # (El formulario de Stripe)
+│   │       ├── ProtectedRoute.tsx     # (El guardián de rutas)
+│   │       └── Select.tsx
 │   │
-│   ├── hooks/              <-- Hooks personalizados
-│   │   └── useFetch.ts     <-- (Lo usaremos para leer los JSON)
+│   ├── layouts/            # (Plantillas de página principales)
+│   │   ├── AdminDashboardLayout.tsx # (Layout para el Super Admin)
+│   │   ├── AuthLayout.tsx           # (Layout para Login/Registro)
+│   │   └── DashboardLayout.tsx      # (Layout para el Panel de Tienda)
 │   │
-│   ├── layouts/            <-- Plantillas de página
-│   │   ├── DashboardLayout.tsx  <-- (El layout con el menú lateral del mockup)
-│   │   └── AuthLayout.tsx       <-- (El layout para Login/Registro)
-│   │
-│   ├── pages/              <-- Las vistas principales (tus 15 puntos)
-│   │   ├── Landing.tsx     <-- (El mockup 1: Landing Page)
-│   │   ├── auth/           <-- Flujo de registro
-│   │   │   └── StoreRegistration.tsx  <-- (El mockup 2: Formulario de registro)
+│   ├── pages/              # (Las vistas/pantallas de la app)
+│   │   ├── Landing.tsx     # (Tu landing page rediseñada)
 │   │   │
-│   │   ├── store-panel/    <-- Panel de Comercio (Puntos 1-8)
-│   │   │   ├── StoreDashboard.tsx   <-- (El mockup 3: Dashboard de negocio)
-│   │   │   ├── StoreProducts.tsx
-│   │   │   └── StoreOrders.tsx
+│   │   ├── auth/           # (Flujo de autenticación)
+│   │   │   ├── Login.tsx           # (Conectado a la API real)
+│   │   │   └── StoreRegistration.tsx # (Wizard real con Stripe)
 │   │   │
-│   │   └── admin-panel/    <-- Panel Admin General (Puntos 9-15)
-│   │       ├── AdminDashboard.tsx
-│   │       └── AdminManageStores.tsx
+│   │   ├── store-panel/    # (Panel de la Tienda)
+│   │   │   ├── StoreDashboard.tsx       # (Conectado a API real: /mine/stats)
+│   │   │   ├── StoreProducts.tsx        # (Conectado a API real: /mine/products)
+│   │   │   ├── StorePromotions.tsx      # (Placeholder / Simulado)
+│   │   │   ├── StoreRecommendations.tsx # (Placeholder / Simulado)
+│   │   │   ├── StoreReports.tsx         # (Placeholder / Simulado)
+│   │   │   └── StoreSettings.tsx        # (Conectado a API real: /mine/profile)
+│   │   │
+│   │   └── admin-panel/    # (Panel del Super Admin)
+│   │       ├── AdminAI.tsx             # (Placeholder / Simulado)
+│   │       ├── AdminDashboard.tsx      # (Conectado a API real: /admin/stats)
+│   │       ├── AdminGlobalProducts.tsx # (Conectado a API real: /products)
+│   │       ├── AdminPayments.tsx       # (Placeholder / Simulado)
+│   │       ├── AdminStoreDetailPage.tsx # (¡NUEVO! Página de detalle de tienda)
+│   │       ├── AdminStores.tsx         # (Conectado a API real: /admin/pending, etc.)
+│   │       ├── AdminSupport.tsx        # (Placeholder / Simulado)
+│   │       └── AdminUsers.tsx          # (Conectado a API real: /users)
 │   │
-│   ├── services/           <-- Lógica para conectar datos
-│   │   └── api.ts          <-- (Aquí pondremos las funciones fetch())
+│   ├── services/           # (Lógica de API)
+│   │   └── api.ts          # (Contiene TODAS las llamadas reales y simuladas)
 │   │
-│   ├── types/              <-- Nuestras definiciones de TypeScript
-│   │   └── index.ts        <-- (Ej: interface Product, interface Store)
+│   ├── types/              # (Definiciones TypeScript)
+│   │   └── index.ts        # (Coincide con tu API real)
 │   │
-│   ├── App.tsx             <-- Aquí vivirá el Router (React Router)
-│   ├── main.tsx            <-- (Punto de entrada, no se toca)
-│   └── index.css           <-- (Ya configurado con Tailwind)
+│   ├── App.tsx             # (El Router principal, con layouts separados)
+│   └── main.tsx            # (El punto de entrada, carga React y Stripe)
 │
-├── tailwind.config.js      <-- (Ya creado)
-├── vite.config.ts          <-- (Ya creado y configurado para PWA)
+├── .env                    # (¡Importante! Tus claves VITE_API_BASE_URL y VITE_STRIPE_PUBLISHABLE_KEY)
+├── index.html              # (El HTML principal, carga el CDN de Tailwind y Leaflet)
+├── package.json            # (Dependencias del proyecto, ej: @heroicons/react)
+├── tailwind.config.js      # (Archivo de config de Tailwind, usado por el CDN)
+├── tsconfig.json           # (Configuración de TypeScript)
+└── vite.config.ts          # (Configuración de Vite y PWA)

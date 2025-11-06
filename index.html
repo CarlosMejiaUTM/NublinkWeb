@@ -3,25 +3,25 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Prisma | Registra tu tienda</title>
+    <title>Nublink | Registra tu tienda</title>
 
-    <!-- ===== SECCIÓN PWA ===== -->
+    <link rel="icon" href="/icons/icon-192x192.png" />
     <meta name="theme-color" content="#4B43B3" />
     <link rel="manifest" href="/manifest.webmanifest" />
     <link rel="apple-touch-icon" href="/icons/icon-192x192.png">
     
-    <!-- ===== FUENTE DE GOOGLE FONTS (IMPORTANTE) ===== -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
 
-    <!-- ===== BLOQUE DE TAILWIND CDN ===== -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
+      // --- ¡CONFIGURACIÓN ACTUALIZADA! ---
       tailwind.config = {
         theme: {
           extend: {
-            // Tu paleta de colores
             colors: {
               'primary': '#4B43B3',
               'primary-dark': '#3A318A',
@@ -34,16 +34,28 @@
               'line-light': '#E5E7EB',
               'surface': '#FFFFFF',
             },
-            // Tu tipografía
             fontFamily: {
               sans: ['Public Sans', 'sans-serif'],
             },
+            // --- ¡NUEVO! Animaciones para el "Wow" ---
+            keyframes: {
+              fadeInUp: {
+                '0%': { opacity: '0', transform: 'translateY(20px)' },
+                '100%': { opacity: '1', transform: 'translateY(0)' },
+              },
+              fadeIn: {
+                '0%': { opacity: '0' },
+                '100%': { opacity: '1' },
+              }
+            },
+            animation: {
+              fadeInUp: 'fadeInUp 0.8s ease-out forwards',
+              fadeIn: 'fadeIn 0.5s ease-out forwards',
+            }
           }
         }
       }
     </script>
-    <!-- ===== FIN DEL BLOQUE ===== -->
-
   </head>
   <body>
     <div id="root"></div>

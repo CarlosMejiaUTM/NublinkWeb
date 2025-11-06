@@ -1,105 +1,171 @@
 // FileName: index.ts
 // Path: src/types/index.ts
 
-// Tipos base
-export interface Store {
-  id: string;
-  name: string;
-  ownerName: string; // Propietario
-  email: string;
-  status: 'Activa' | 'Pendiente' | 'Suspendida';
-  registrationDate: string;
-  // Añadir más detalles si es necesario (tipo de negocio, RFC, etc.)
+// --- TIPOS BASADOS EN TU RESPUESTA DE API ---
+
+// ¡NUEVO TIPO! Basado en GET /web/stores/mine/stats
+interface ProductStat {
+  productId: number;
+  productName: string;
+  units_sold?: number; // Para más vendidos
+  revenue?: string;
+  quantity?: number; // Para stock
+}
+interface SaleStat {
+  productName: string;
+  total: string;
+  quantity: number;
+  createdAt: string;
+}
+export interface StoreStatsData {
+  total_sales: number;
+  total_revenue: number;
+  average_ticket: number;
+  total_products: number;
+  low_stock: number;
+  highest_selling_product: ProductStat;
+  lowest_selling_product: ProductStat;
+  best_stocked_product: ProductStat;
+  worst_stocked_product: ProductStat;
+  last_sales: SaleStat[];
+}
+// Respuesta completa de GET /web/stores/mine/stats
+export interface GetStoreStatsResponse {
+  ok: boolean;
+  data: StoreStatsData;
+}
+// --- FIN NUEVOS TIPOS DE STATS ---
+
+
+// ¡TIPO ACTUALIZADO! Basado en GET /web/superadmin/admin/stats
+export interface AdminDashboardSummary {
+  usuarios: {
+    total: number;
+  };
+  tiendas: {
+    total: number;
+    activas: number;
+    pendientes: number;
+  };
+  stripe: {
+    suscripciones_activas: number;
+  };
 }
 
+
+export interface Store {
+  id: number;
+  business_name: string;
+  owner_name: string;
+  address: string;
+  map_url: string | null;
+  longitude: number | null;
+  latitude: number | null;
+  description: string | null;
+  status: 'pending' | 'active' | 'rejected' | string;
+  is_verified: boolean;
+  schedule?: string;
+  phone?: string; 
+  logo_url?: string;
+  cover_image_url?: string;
+}
+export interface User {
+  id: number;
+  name: string;
+  email: string;
+  phone: string | null;
+  username: string | null;
+  role: 'store' | 'superadmin' | 'client';
+  created_at: string;
+  store: Store | null;
+}
+export interface Category {
+  id: number;
+  name: string;
+  description: string;
+}
+export interface GetUsersResponse {
+  statusCode: number;
+  message: string;
+  total: number;
+  data: User[];
+}
+export interface GetProductsResponse {
+  statusCode: number;
+  message: string;
+  total: number;
+  data: Product[];
+}
+export interface GetStoresResponse {
+  statusCode: number;
+  message: string;
+  total: number;
+  data: Store[];
+}
+
+// --- Tipos de la App ---
 export interface Product {
-  id: string;
-  imageUrl?: string; // Opcional si no siempre hay imagen
+  id: string | number;
   name: string;
   description?: string;
-  category?: string;
+  category_id?: number;
+  store_id?: number;
   price: number;
   stock: number;
-  status: 'Activo' | 'Inactivo' | 'Borrador'; // Estado 'Borrador' añadido
-  barcode?: string; // Código de barras
-  discount?: number; // Descuento porcentual o fijo
+  imageUrl?: string;
+  status?: 'Activo' | 'Inactivo' | 'Borrador' | string;
+  barcode?: string;
 }
-
 export interface Order {
-    id: string; // ej: ORD-001
+    id: string;
     clientName: string;
     productName: string;
-    date: string; // ej: '2025-10-20'
-    status: 'Pendiente' | 'Confirmado' | 'Pagado' | 'Entregado' | 'Cancelado'; // Estado 'Cancelado'
-    // Añadir más detalles (cantidad, total, método pago, etc.)
+    date: string;
+    status: 'Pendiente' | 'Confirmado' | 'Pagado' | 'Entregado' | 'Cancelado';
 }
+export interface Promotion { /* ... */ }
 
-export interface Promotion {
-    id: string;
-    name: string;
-    type: 'Descuento %' | 'Precio Fijo' | 'Combo' | '2x1';
-    productIds: string[]; // Productos a los que aplica
-    startDate: string;
-    endDate: string;
-    status: 'Activa' | 'Inactiva' | 'Programada';
-    discountValue?: number; // Porcentaje o monto fijo
-}
-
-// Tipos para Dashboards
+// --- Tipos de Dashboard (Usados por partes SIMULADAS) ---
 export interface DashboardStats {
     todaySales: { value: number; change: number };
     monthSales: { value: number; change: number };
     pendingOrders: { value: number; change: number };
     lowStockItems: { value: number; change: number };
 }
-
 export interface KeyMetrics {
     salesTrend: {
         percentChange: number;
-        // Data para gráfico (ej: ventas por semana)
         data: { label: string; value: number }[];
     };
     topScannedProducts: {
         totalScans: number;
         change: number;
-        // Productos y su % de contribución a los escaneos
         products: { id: string; name: string; percentage: number }[];
     };
 }
+export interface Transaction { /* ... */ }
+export interface SupportTicket { /* ... */ }
 
-export interface AdminDashboardSummary {
-    totalUsers: number;
-    activeStores: number;
-    pendingStores: number;
-    totalProducts: number;
-    totalTransactions: number;
-    // Añadir datos para gráficos globales
-}
 
-// Tipos para Paneles de Admin
-export interface User {
-    id: string;
-    name: string;
-    email: string;
-    registrationDate: string;
-    totalScans: number;
-    status: 'Activo' | 'Inactivo';
-}
-
-export interface Transaction {
-    id: string;
-    storeName: string;
-    amount: number;
-    commission: number;
-    date: string;
-    status: 'Pagado' | 'Pendiente' | 'Fallido';
-}
-
-export interface SupportTicket {
-    id: string;
-    subject: string;
-    userName: string; // O storeName
-    date: string;
-    status: 'Abierto' | 'En Progreso' | 'Resuelto' | 'Cerrado';
-    priority: 'Baja' | 'Media' | 'Alta';
+// --- TIPO DE REGISTRO DE TIENDA (AJUSTADO A TU API REAL) ---
+export interface StoreRegistrationData {
+  business_name: string;
+  owner_name: string;
+  address: string;
+  map_url: string;
+  longitude: string;
+  latitude: string;
+  description: string;
+  category_id: number;
+  status: "pending";
+  
+  user_name: string;
+  user_email: string;
+  password: string,
+  phone: string | null;
+  username: string | null;
+  role: "store";
+  
+  plan_id: string;
+  payment_method_id: string;
 }

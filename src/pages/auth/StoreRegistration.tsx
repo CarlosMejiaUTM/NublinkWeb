@@ -1,184 +1,439 @@
 // FileName: StoreRegistration.tsx
 // Path: src/pages/auth/StoreRegistration.tsx
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Input from '../../components/common/Input';
 import Button from '../../components/common/Button';
 import Select from '../../components/common/Select';
 import { Link } from 'react-router-dom';
-import AuthLayout from '../../layouts/AuthLayout'; // Usa el layout específico
+import AuthLayout from '../../layouts/AuthLayout';
+import Card from '../../components/common/Card';
+import LocationPickerMap from '../../components/common/LocationPickerMap';
+import PaymentForm from '../../components/common/PaymentForm';
+import { registerStore, getCategories } from '../../services/api';
+import type { StoreRegistrationData, Category } from '../../types';
 
-// Componente para el encabezado del formulario wizard dentro de AuthLayout
-const WizardHeader = ({ currentStep, totalSteps }: { currentStep: number; totalSteps: number }) => (
-    <div className="text-center mb-8">
-        {/* Subtítulo dinámico para el paso actual */}
-        <p className="text-text-muted mt-2 text-sm">Step {currentStep} of {totalSteps}</p>
-        {/* Barras de progreso */}
-        <div className="flex justify-center mt-4 space-x-2">
-            {[...Array(totalSteps)].map((_, index) => (
-                <div
-                    key={index}
-                    className={`h-2 flex-1 rounded-full transition-colors duration-300 ${index + 1 <= currentStep ? 'bg-primary' : 'bg-secondary'}`}
-                ></div>
-            ))}
-        </div>
+// Iconos
+import {
+  BuildingStorefrontIcon,
+  UserIcon,
+  MapPinIcon,
+  TagIcon,
+  EnvelopeIcon,
+  LockClosedIcon,
+  DevicePhoneMobileIcon,
+  UserCircleIcon,
+} from '@heroicons/react/20/solid';
+
+// --- Encabezado del Wizard ---
+const WizardHeader = ({
+  currentStep,
+  totalSteps,
+}: {
+  currentStep: number;
+  totalSteps: number;
+}) => (
+  <div className="text-center mb-10 animate-fadeIn">
+    <h2 className="text-2xl font-bold text-text-main mb-2">
+      {currentStep === 1
+        ? 'Datos de tu Tienda'
+        : currentStep === 2
+        ? 'Datos de tu Cuenta'
+        : currentStep === 3
+        ? 'Selecciona tu Plan'
+        : 'Pago Seguro'}
+    </h2>
+    <p className="text-text-muted text-sm">Paso {currentStep} de {totalSteps}</p>
+    <div className="flex justify-center mt-4 space-x-2">
+      {[...Array(totalSteps)].map((_, index) => (
+        <div
+          key={index}
+          className={`h-2 flex-1 max-w-[60px] rounded-full transition-all duration-500 ${
+            index + 1 <= currentStep
+              ? 'bg-gradient-to-r from-primary to-indigo-500'
+              : 'bg-secondary'
+          }`}
+        ></div>
+      ))}
     </div>
+  </div>
 );
 
-// Componente para el mensaje de éxito
-const SuccessMessage = () => (
-    <div className="text-center py-8">
-        <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center text-3xl mx-auto text-green-600 mb-6">
-            {/* Icono de check SVG */}
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-        </div>
-        <h2 className="text-3xl font-bold text-text-main mt-4">Registration Successful!</h2>
-        <p className="text-text-muted mt-2 max-w-sm mx-auto text-base">
-            Your store has been submitted. Our team will review your information and you'll be notified by email within 24 hours.
-        </p>
-        <div className="mt-8">
-            <Link to="/login">
-                <Button size="lg">Go to Login</Button>
-            </Link>
-        </div>
+// --- Mensaje de éxito ---
+const SuccessMessage = ({ onShow }: { onShow: () => void }) => {
+  useEffect(() => {
+    onShow();
+  }, [onShow]);
+  return (
+    <div className="text-center py-10 animate-fadeInUp">
+      <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          className="h-10 w-10 text-green-600"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M5 13l4 4L19 7"
+          />
+        </svg>
+      </div>
+      <h2 className="text-3xl font-bold text-text-main">¡Registro Exitoso!</h2>
+      <p className="text-text-muted mt-3 max-w-md mx-auto text-base">
+        Tu tienda ha sido registrada correctamente y está pendiente de aprobación.
+        Ahora puedes iniciar sesión con tu nueva cuenta.
+      </p>
+      <div className="mt-8">
+        <Link to="/login">
+          <Button size="lg" className="bg-primary text-white rounded-full px-8 py-3 hover:brightness-110">
+            Ir a Iniciar Sesión
+          </Button>
+        </Link>
+      </div>
     </div>
+  );
+};
+
+// --- Tarjeta de plan ---
+const PlanCard = ({
+  planName,
+  price,
+  features,
+  isSelected,
+  onSelect,
+}: {
+  planName: string;
+  price: string;
+  features: string[];
+  isSelected: boolean;
+  onSelect: () => void;
+}) => (
+  <div
+    onClick={onSelect}
+    className={`relative cursor-pointer bg-surface rounded-2xl p-6 transition-all duration-300 border ${
+      isSelected ? 'border-primary shadow-[0_0_15px_rgba(99,102,241,0.4)]' : 'border-line-light hover:shadow-lg hover:border-primary/50'
+    }`}
+  >
+    {isSelected && (
+      <div className="absolute top-4 right-4 bg-primary text-white rounded-full w-6 h-6 flex items-center justify-center shadow-md">
+        ✓
+      </div>
+    )}
+    <h3 className="text-xl font-semibold text-text-main text-center">{planName}</h3>
+    <p className="text-3xl font-extrabold text-text-main text-center my-4">
+      {price}
+      <span className="text-sm font-normal text-text-muted">/mes</span>
+    </p>
+    <ul className="space-y-2 text-sm text-text-muted mb-6">
+      {features.map((feature, i) => (
+        <li key={i} className="flex items-center gap-2">
+          <svg
+            className="w-4 h-4 text-green-500"
+            fill="currentColor"
+            viewBox="0 0 20 20"
+          >
+            <path
+              fillRule="evenodd"
+              d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+              clipRule="evenodd"
+            ></path>
+          </svg>
+          {feature}
+        </li>
+      ))}
+    </ul>
+    <Button
+      variant={isSelected ? 'primary' : 'secondary'}
+      className="w-full rounded-full mt-3"
+      onClick={onSelect}
+    >
+      {isSelected ? 'Seleccionado' : 'Seleccionar'}
+    </Button>
+  </div>
 );
 
-// Placeholder para el mapa
-const MapPlaceholder = () => (
-    <div className="h-64 bg-secondary rounded-lg flex items-center justify-center border border-dashed border-line-light">
-        <p className="text-text-muted text-sm">Interactive Map (Google Maps API)</p>
-    </div>
-);
+// --- Estado inicial y claves ---
+interface RegistrationFormState {
+  step: number;
+  business_name: string;
+  owner_name: string;
+  address: string;
+  category_id: number | null;
+  description: string;
+  coords: { lat: number; lng: number } | null;
+  user_name: string;
+  user_email: string;
+  password: string;
+  phone: string;
+  username: string;
+  plan_id: 'basico' | 'premium' | null;
+}
+const initialState: RegistrationFormState = {
+  step: 1,
+  business_name: '',
+  owner_name: '',
+  address: '',
+  category_id: null,
+  description: '',
+  coords: null,
+  user_name: '',
+  user_email: '',
+  password: '',
+  phone: '',
+  username: '',
+  plan_id: null,
+};
+const STORAGE_KEY = 'nublink-registration-draft-v3';
 
-// --- Componente Principal ---
+// --- Componente principal ---
 const StoreRegistrationPage = () => {
-    // Estado para controlar el paso actual del wizard
-    const [step, setStep] = useState(1);
-    const nextStep = () => setStep(prev => prev + 1);
-    const prevStep = () => setStep(prev => prev - 1);
+  const [formData, setFormData] = useState<RegistrationFormState>(() => {
+    const savedDraft = sessionStorage.getItem(STORAGE_KEY);
+    if (savedDraft) {
+      try {
+        const parsed = JSON.parse(savedDraft);
+        return { ...parsed, step: 1 };
+      } catch {
+        return initialState;
+      }
+    }
+    return initialState;
+  });
 
-    // Número total de pasos (sin contar el de éxito)
-    const totalSteps = 4;
-    // Variable para saber si estamos en el último paso (éxito)
-    const isSuccessStep = step === totalSteps + 1;
+  const [categoryOptions, setCategoryOptions] = useState<
+    { value: string; label: string }[]
+  >([{ value: '', label: 'Cargando categorías...' }]);
+  const [categoryError, setCategoryError] = useState(false);
 
-    // Manejador del envío del formulario (avanza al siguiente paso)
-    const handleSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        // Aquí iría la lógica de validación antes de avanzar
-        if (!isSuccessStep) { // Evita avanzar si ya está en éxito
-             nextStep();
-        }
+  useEffect(() => {
+    const loadCategories = async () => {
+      try {
+        setCategoryError(false);
+        const categories = await getCategories();
+        const options = categories.map((cat: Category) => ({
+          value: cat.id.toString(),
+          label: cat.name,
+        }));
+        setCategoryOptions([
+          { value: '', label: 'Selecciona una categoría...' },
+          ...options,
+        ]);
+      } catch {
+        setCategoryError(true);
+        setCategoryOptions([{ value: '', label: 'Error al cargar categorías' }]);
+      }
+    };
+    loadCategories();
+  }, []);
+
+  useEffect(() => {
+    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(formData));
+  }, [formData]);
+
+  const [apiError, setApiError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const nextStep = () =>
+    setFormData((prev) => ({ ...prev, step: prev.step + 1 }));
+  const prevStep = () =>
+    setFormData((prev) => ({ ...prev, step: prev.step - 1 }));
+  const handleLocationSelected = (coords: { lat: number; lng: number }) =>
+    setFormData((prev) => ({ ...prev, coords }));
+  const selectPlan = (planId: 'basico' | 'premium') =>
+    setFormData((prev) => ({ ...prev, plan_id: planId }));
+
+  const handleChange = (
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
+    >
+  ) => {
+    const { id, value } = e.target;
+    const fieldValue =
+      id === 'category_id' ? (value ? parseInt(value) : null) : value;
+    setFormData((prev) => ({ ...prev, [id]: fieldValue }));
+  };
+
+  const totalVisibleSteps = 4;
+  const isSuccessStep = formData.step === totalVisibleSteps + 1;
+
+  // --- Validación por paso ---
+  const handleStepSubmit = () => {
+    if (formData.step === 1) {
+      if (
+        !formData.business_name ||
+        !formData.owner_name ||
+        !formData.address ||
+        !formData.category_id ||
+        !formData.coords
+      ) {
+        alert('Por favor, completa todos los datos de la tienda.');
+        return;
+      }
+    } else if (formData.step === 2) {
+      if (
+        !formData.user_name ||
+        !formData.user_email ||
+        !formData.phone ||
+        !formData.password ||
+        !formData.username
+      ) {
+        alert('Completa todos los datos de tu cuenta.');
+        return;
+      }
+    } else if (formData.step === 3 && !formData.plan_id) {
+      alert('Selecciona un plan.');
+      return;
+    }
+    nextStep();
+  };
+
+  // --- Envío final (registro + pago) ---
+  const handlePaymentSubmit = async (paymentMethodId?: string, error?: string) => {
+    setApiError(null);
+    setIsSubmitting(true);
+
+    if (error) {
+      setApiError(error);
+      setIsSubmitting(false);
+      return;
+    }
+
+    const registrationApiData: StoreRegistrationData = {
+      business_name: formData.business_name,
+      owner_name: formData.owner_name,
+      address: formData.address,
+      category_id: formData.category_id!,
+      description: formData.description || 'Sin descripción',
+      latitude: formData.coords!.lat.toString(),
+      longitude: formData.coords!.lng.toString(),
+      map_url: `https://goo.gl/maps/example`,
+      status: 'pending',
+      user_name: formData.user_name,
+      user_email: formData.user_email,
+      password: formData.password,
+      phone: formData.phone,
+      username: formData.username,
+      role: 'store',
+      plan_id: formData.plan_id!,
+      payment_method_id: paymentMethodId!,
     };
 
-    // Opciones para el <Select> de tipo de negocio
-    const businessTypeOptions = [
-        { value: '', label: 'Select Type of business' },
-        { value: 'grocery', label: 'Grocery Store' },
-        { value: 'hardware', label: 'Hardware Store' },
-        { value: 'clothing', label: 'Clothing Boutique' },
-        { value: 'restaurant', label: 'Restaurant' },
-        { value: 'other', label: 'Other' },
-    ];
+    try {
+      await registerStore(registrationApiData);
+      nextStep();
+    } catch (backendError) {
+      setApiError(
+        backendError instanceof Error
+          ? backendError.message
+          : 'Error al conectar con el servidor.'
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
-    // --- Renderizado del Componente ---
-    return (
-      // Usamos AuthLayout que ya incluye Header y Footer
-      <AuthLayout
-          title="Register your business"
-          // El subtítulo cambia según si es un paso normal o el de éxito
-          subtitle={isSuccessStep ? undefined : `Let's get you set up.`}
-      >
-            {/* Muestra el encabezado del wizard solo si no es el paso de éxito */}
-            {!isSuccessStep && <WizardHeader currentStep={step} totalSteps={totalSteps} />}
+  return (
+    <AuthLayout title="Registra tu negocio" subtitle="Crea tu tienda paso a paso">
+      {!isSuccessStep && (
+        <WizardHeader currentStep={formData.step} totalSteps={totalVisibleSteps} />
+      )}
+      {isSuccessStep && <SuccessMessage onShow={() => sessionStorage.removeItem(STORAGE_KEY)} />}
 
-            {/* Muestra el mensaje de éxito solo en el último paso */}
-            {isSuccessStep && <SuccessMessage />}
+      {!isSuccessStep && (
+        <div className="space-y-6 animate-fadeInUp">
+          {/* Paso 1 */}
+          {formData.step === 1 && (
+            <div className="space-y-5">
+              <Input id="business_name" label="Nombre comercial" value={formData.business_name} onChange={handleChange} required icon={<BuildingStorefrontIcon />} />
+              <Input id="owner_name" label="Propietario" value={formData.owner_name} onChange={handleChange} required icon={<UserIcon />} />
+              <Select id="category_id" label="Categoría" options={categoryOptions} value={formData.category_id || ''} onChange={handleChange} required icon={<TagIcon />} />
+              <Input id="address" label="Dirección" value={formData.address} onChange={handleChange} required icon={<MapPinIcon />} />
+              <LocationPickerMap onLocationSelect={handleLocationSelected} />
+              <textarea id="description" className="w-full px-4 py-2 rounded-lg border bg-secondary focus:ring-2 focus:ring-primary text-sm" placeholder="Descripción breve..." value={formData.description} onChange={handleChange}></textarea>
+            </div>
+          )}
 
-            {/* Muestra el formulario solo si NO es el paso de éxito */}
-            {!isSuccessStep && (
-                <form onSubmit={handleSubmit} className="space-y-6">
-                    {/* --- Paso 1: Detalles del Negocio --- */}
-                    {step === 1 && (
-                        <div className="space-y-5">
-                            <h2 className="text-xl font-semibold text-text-main mb-3">Business Details</h2>
-                            <Input id="businessName" label="Name of business" placeholder="Ej. Tienda de abarrotes 'La Esquina'" required/>
-                            <Input id="companyName" label="Company Name" isOptional={true}/>
-                            <Select
-                                id="businessType"
-                                label="Type of business"
-                                options={businessTypeOptions}
-                                required
-                            />
-                            <Input id="rfc" label="RFC" isOptional={true}/>
-                            <Input id="email" label="Email" type="email" placeholder="example@domain.com" required/>
-                            <Input id="password" label="Password" type="password" placeholder="••••••••" required/>
-                        </div>
-                    )}
+          {/* Paso 2 */}
+          {formData.step === 2 && (
+            <div className="space-y-5">
+              <Input id="user_name" label="Nombre Completo" value={formData.user_name} onChange={handleChange} icon={<UserIcon />} />
+              <Input id="username" label="Usuario" value={formData.username} onChange={handleChange} icon={<UserCircleIcon />} />
+              <Input id="user_email" label="Correo" value={formData.user_email} onChange={handleChange} icon={<EnvelopeIcon />} />
+              <Input id="phone" label="Teléfono" value={formData.phone} onChange={handleChange} icon={<DevicePhoneMobileIcon />} />
+              <Input id="password" label="Contraseña" type="password" value={formData.password} onChange={handleChange} icon={<LockClosedIcon />} />
+            </div>
+          )}
 
-                    {/* --- Paso 2: Ubicación --- */}
-                    {step === 2 && (
-                        <div className="space-y-5">
-                            <h2 className="text-xl font-semibold text-text-main mb-3">Location Information</h2>
-                            <Input id="address" label="Full Address" placeholder="Street, City, State, Zip Code" required/>
-                            <MapPlaceholder />
-                            <Input id="reference" label="Reference" placeholder="e.g. Next to the park, in front of the church" isOptional={true}/>
-                        </div>
-                    )}
+          {/* Paso 3 */}
+          {formData.step === 3 && (
+            <div className="grid md:grid-cols-2 gap-6">
+              <PlanCard
+                planName="Básico"
+                price="$200 MXN"
+                features={['Gestión de inventario', 'Aparición en mapa', 'Modo tienda']}
+                isSelected={formData.plan_id === 'basico'}
+                onSelect={() => selectPlan('basico')}
+              />
+              <PlanCard
+                planName="IA Premium"
+                price="$500 MXN"
+                features={['Todo lo Básico', 'Inteligencia Comercial', 'Analítica Predictiva']}
+                isSelected={formData.plan_id === 'premium'}
+                onSelect={() => selectPlan('premium')}
+              />
+            </div>
+          )}
 
-                    {/* --- Paso 3: Perfil Visual --- */}
-                    {step === 3 && (
-                         <div className="space-y-5">
-                            <h2 className="text-xl font-semibold text-text-main mb-3">Visual Profile & Schedule</h2>
-                            <Input id="logo" label="Logo" type="file" accept="image/*" required/>
-                            <Input id="coverImage" label="Cover Image" type="file" accept="image/*" isOptional={true}/>
-                            <Input id="schedule" label="Opening Hours" placeholder="Mon-Fri 9am-6pm, Sat 9am-2pm" required/>
-                            <div>
-                               <label htmlFor="description" className="block text-sm font-medium text-text-main mb-1.5">Short Description</label>
-                               <textarea
-                                  id="description"
-                                  rows={3}
-                                  maxLength={300}
-                                  className="w-full px-4 py-2.5 border border-line-light rounded-lg shadow-sm focus:ring-primary focus:border-primary bg-secondary placeholder-text-muted/60 text-sm"
-                                  placeholder="Tell us a little about your business..."
-                                  required
-                               ></textarea>
-                            </div>
-                        </div>
-                    )}
+          {/* Paso 4 */}
+          {formData.step === 4 && (
+            <div className="space-y-6">
+              <PaymentForm
+                onSubmit={handlePaymentSubmit}
+                isProcessing={isSubmitting}
+                submitButtonText={`Activar Plan ${
+                  formData.plan_id === 'premium' ? 'IA Premium' : 'Básico'
+                }`}
+              />
+              {apiError && (
+                <p className="text-red-600 bg-red-50 p-3 rounded-md text-center border border-red-200">
+                  {apiError}
+                </p>
+              )}
+            </div>
+          )}
 
-                    {/* --- Paso 4: Pagos --- */}
-                    {step === 4 && (
-                         <div className="space-y-5">
-                            <h2 className="text-xl font-semibold text-text-main mb-3">Payment Setup</h2>
-                            <p className="text-text-muted text-base mb-4">Allow your customers to pay you online securely.</p>
-                            <div className="space-y-4">
-                                <Button type="button" className="w-full bg-blue-600 hover:bg-blue-700">Connect with Stripe</Button>
-                                <Button type="button" className="w-full bg-cyan-500 hover:bg-cyan-600">Connect with MercadoPago</Button>
-                                <div className="pt-2 flex items-center gap-2">
-                                    <input id="no-payment" type="checkbox" className="h-4 w-4 text-primary focus:ring-primary border-line-light rounded"/>
-                                    <label htmlFor="no-payment" className="block text-sm text-text-main">I'll only accept reservations (no online payment)</label>
-                                </div>
-                            </div>
-                        </div>
-                    )}
+          {/* Botones */}
+          <div className={`mt-8 flex ${formData.step > 1 ? 'justify-between' : 'justify-end'}`}>
+            {formData.step > 1 && (
+              <Button onClick={prevStep} variant="secondary" type="button" disabled={isSubmitting}>
+                Regresar
+              </Button>
+            )}
+            <Button onClick={handleStepSubmit} disabled={isSubmitting}>
+              {isSubmitting ? 'Cargando...' : formData.step === totalVisibleSteps - 1 ? 'Continuar al Pago' : 'Siguiente Paso'}
+            </Button>
+          </div>
+        </div>
+      )}
 
-                    {/* --- Botones de Navegación --- */}
-                    <div className={`mt-8 flex ${step > 1 ? 'justify-between' : 'justify-end'}`}>
-                        {/* Botón "Atrás" (solo visible desde el paso 2 en adelante) */}
-                        {step > 1 && (
-                            <Button onClick={prevStep} variant="secondary" type="button">Go Back</Button>
-                        )}
-                        {/* Botón "Siguiente" o "Finalizar" */}
-                        <Button type="submit">
-                            {step === totalSteps ? 'Finish Registration' : 'Next Step'}
-                        </Button>
-                    </div>
-                </form> // Cierre de la etiqueta form
-            )} {/* Cierre del condicional !isSuccessStep */}
-      </AuthLayout> 
-    ); // Cierre del return
-}; // Cierre del componente
+      <style>{`
+        @keyframes fadeIn {
+          0% { opacity: 0 }
+          100% { opacity: 1 }
+        }
+        @keyframes fadeInUp {
+          0% { opacity: 0; transform: translateY(30px) }
+          100% { opacity: 1; transform: translateY(0) }
+        }
+        .animate-fadeIn { animation: fadeIn 0.8s ease-out }
+        .animate-fadeInUp { animation: fadeInUp 0.8s ease-out }
+      `}</style>
+    </AuthLayout>
+  );
+};
 
 export default StoreRegistrationPage;
