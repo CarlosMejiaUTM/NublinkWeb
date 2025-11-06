@@ -256,59 +256,36 @@ export const getStoreProducts = async (): Promise<Product[]> => {
   }
 };
 
-/**
- * ✅ getStoreProfile (CORREGIDO y MEJORADO)
- * Devuelve el objeto completo del usuario con su tienda (si aplica).
- * Si el token pertenece a un superadmin, usa /auth/me automáticamente.
- */
-export const getStoreProfile = async (): Promise<User> => {
+// --- GET PROFILE ---
+export const getStoreProfile = async (): Promise<Partial<User & Store>> => {
   const PROFILE_ENDPOINT = '/web/stores/mine/profile-with-store';
-  const FALLBACK_ENDPOINT = '/auth/me';
-
   try {
-    console.log("🧩 getStoreProfile(): obteniendo perfil de tienda...");
-    const apiResponse: any = await fetchWithAuth(PROFILE_ENDPOINT, { method: 'GET' });
+    const response = await fetchWithAuth(PROFILE_ENDPOINT, { method: 'GET' });
+    
+    if (!response?.ok || !response.data) throw new Error("No se pudo obtener el perfil");
 
-    console.log('🧩 Respuesta cruda de /profile-with-store:', apiResponse);
+    const userData: User & { store: Store | null } = response.data;
 
-    // Si el backend devuelve { ok: false, error: 'Unauthorized...' }, probamos como superadmin
-    if (apiResponse?.ok === false && apiResponse?.error?.toLowerCase().includes('unauthorized')) {
-      console.warn("⚠ Token no válido para perfil de tienda. Intentando /auth/me (superadmin)...");
-
-      const meData: any = await fetchWithAuth(FALLBACK_ENDPOINT, { method: 'GET' });
-      console.log("🧩 Perfil obtenido desde /auth/me:", meData);
-
-      const normalizedSuperadmin: User = {
-        ...meData,
-        role: meData.role || 'superadmin',
-        store: null,
-      };
-
-      console.log("✅ Usuario normalizado (superadmin):", normalizedSuperadmin);
-      return normalizedSuperadmin;
-    }
-
-    // Si viene envuelto en { ok, data }, extraemos el objeto real
-    const userRaw = apiResponse?.data || apiResponse;
-    if (!userRaw) throw new Error("La respuesta no contiene 'data' con el usuario.");
-
-    const normalizedRole = userRaw.role || userRaw.rol || userRaw.userType || userRaw.type || 'store';
-
-    const normalizedUser: User = {
-      ...userRaw,
-      role: normalizedRole,
-      store: userRaw.store || null,
+    // --- Normalizar null → undefined ---
+    const normalize = (obj: any) => {
+      const result: any = {};
+      Object.keys(obj).forEach(key => {
+        result[key] = obj[key] === null ? undefined : obj[key];
+      });
+      return result;
     };
 
-    console.log('✅ Usuario normalizado (tienda):', normalizedUser);
-    return normalizedUser;
+    const combinedData = { ...normalize(userData.store || {}), ...normalize(userData) };
+    delete combinedData.store;
+
+    return combinedData;
+
   } catch (error) {
-    console.error("❌ Fallo al obtener perfil de tienda o usuario:", error);
+    console.error("Fallo al obtener perfil de tienda:", error);
     if (error instanceof Error) throw new Error(error.message);
-    throw new Error("No se pudo cargar el perfil del usuario.");
+    throw new Error("No se pudo cargar el perfil de la tienda.");
   }
 };
-
 
 // ✅ FUNCIÓN API CORREGIDA - COPIA ESTO EN TU api.ts
 
@@ -542,50 +519,3 @@ export const getAdminStoreStatsById = async (storeId: string): Promise<StoreStat
 };
 
 
-
-
-/* ============================================================
-   💳 PAGOS
-   ============================================================ */
-export const createCheckoutSession = async (cartItems: any[]) => {
-  try {
-    const response = await fetchWithAuth('/web/payments/create-checkout-session', {
-      method: 'POST',
-      body: JSON.stringify({ items: cartItems }),
-    });
-    return response;
-  } catch (error) {
-    console.error("Fallo al crear sesión de checkout:", error);
-    if (error instanceof Error) throw new Error(error.message);
-    throw new Error("No se pudo crear la sesión de pago.");
-  }
-};
-
-
-/* ============================================================
-   🔧 HELPER: fetchWithoutAuth
-   ============================================================ */
-const fetchWithoutAuth = async (endpoint: string, options: RequestInit = {}) => {
-  const headers = new Headers(options.headers || {});
-  if (!headers.has('Content-Type')) headers.append('Content-Type', 'application/json');
-
-  const response = await fetch(${API_BASE_URL}${endpoint}, { ...options, headers });
-
-  if (!response.ok) {
-    try {
-      const err = await response.json();
-      const msg = Array.isArray(err.message) ? err.message.join(', ') : (err.message || Error HTTP: ${response.status});
-      throw new Error(msg);
-    } catch {
-      throw new Error(Error HTTP: ${response.status});
-    }
-  }
-
-  if (response.status === 204) return null;
-
-  try {
-    return await response.json();
-  } catch {
-    throw new Error('Respuesta del servidor no es JSON válido.');
-  }
-};
