@@ -1,22 +1,26 @@
 // FileName: index.ts
 // Path: src/types/index.ts
 
-// --- TIPOS BASADOS EN TU RESPUESTA DE API ---
+/* ============================================================
+   📦 TIPOS BASADOS EN RESPUESTAS REALES DE TU API
+   ============================================================ */
 
-// ¡NUEVO TIPO! Basado en GET /web/stores/mine/stats
+// --- TIPOS DE ESTADÍSTICAS DE TIENDA ---
 interface ProductStat {
   productId: number;
   productName: string;
-  units_sold?: number; // Para más vendidos
+  units_sold?: number;
   revenue?: string;
-  quantity?: number; // Para stock
+  quantity?: number;
 }
+
 interface SaleStat {
   productName: string;
   total: string;
   quantity: number;
   createdAt: string;
 }
+
 export interface StoreStatsData {
   total_sales: number;
   total_revenue: number;
@@ -29,46 +33,42 @@ export interface StoreStatsData {
   worst_stocked_product: ProductStat;
   last_sales: SaleStat[];
 }
-// Respuesta completa de GET /web/stores/mine/stats
+
 export interface GetStoreStatsResponse {
   ok: boolean;
   data: StoreStatsData;
 }
-// --- FIN NUEVOS TIPOS DE STATS ---
 
-
-// ¡TIPO ACTUALIZADO! Basado en GET /web/superadmin/admin/stats
+/* ============================================================
+   👑 DASHBOARD ADMIN
+   ============================================================ */
 export interface AdminDashboardSummary {
-  usuarios: {
-    total: number;
-  };
-  tiendas: {
-    total: number;
-    activas: number;
-    pendientes: number;
-  };
-  stripe: {
-    suscripciones_activas: number;
-  };
+  usuarios: { total: number };
+  tiendas: { total: number; activas: number; pendientes: number };
+  stripe: { suscripciones_activas: number };
 }
 
-
+/* ============================================================
+   🏪 TIENDAS Y USUARIOS
+   ============================================================ */
 export interface Store {
   id: number;
   business_name: string;
   owner_name: string;
   address: string;
-  map_url: string | null;
-  longitude: number | null;
-  latitude: number | null;
-  description: string | null;
-  status: 'pending' | 'active' | 'rejected' | string;
+  map_url?: string | null;
+  longitude?: number | string | null;
+  latitude?: number | string | null;
+  description?: string | null;
+  category?: string | null;
+  status: 'pending' | 'approved' | 'active' | 'rejected' | string;
   is_verified: boolean;
   schedule?: string;
-  phone?: string; 
+  phone?: string;
   logo_url?: string;
   cover_image_url?: string;
 }
+
 export interface User {
   id: number;
   name: string;
@@ -78,24 +78,35 @@ export interface User {
   role: 'store' | 'superadmin' | 'client';
   created_at: string;
   store: Store | null;
+  detail?: any;
 }
+
+/* ============================================================
+   🏷️ CATEGORÍAS
+   ============================================================ */
 export interface Category {
   id: number;
   name: string;
   description: string;
 }
+
+/* ============================================================
+   🔢 RESPUESTAS GENERALES
+   ============================================================ */
 export interface GetUsersResponse {
   statusCode: number;
   message: string;
   total: number;
   data: User[];
 }
+
 export interface GetProductsResponse {
   statusCode: number;
   message: string;
   total: number;
   data: Product[];
 }
+
 export interface GetStoresResponse {
   statusCode: number;
   message: string;
@@ -103,7 +114,9 @@ export interface GetStoresResponse {
   data: Store[];
 }
 
-// --- Tipos de la App ---
+/* ============================================================
+   🛒 PRODUCTOS, PEDIDOS Y MÁS
+   ============================================================ */
 export interface Product {
   id: string | number;
   name: string;
@@ -116,38 +129,45 @@ export interface Product {
   status?: 'Activo' | 'Inactivo' | 'Borrador' | string;
   barcode?: string;
 }
+
 export interface Order {
-    id: string;
-    clientName: string;
-    productName: string;
-    date: string;
-    status: 'Pendiente' | 'Confirmado' | 'Pagado' | 'Entregado' | 'Cancelado';
+  id: string;
+  clientName: string;
+  productName: string;
+  date: string;
+  status: 'Pendiente' | 'Confirmado' | 'Pagado' | 'Entregado' | 'Cancelado';
 }
+
 export interface Promotion { /* ... */ }
 
-// --- Tipos de Dashboard (Usados por partes SIMULADAS) ---
+/* ============================================================
+   📊 DASHBOARD SIMULADO (DEMO)
+   ============================================================ */
 export interface DashboardStats {
-    todaySales: { value: number; change: number };
-    monthSales: { value: number; change: number };
-    pendingOrders: { value: number; change: number };
-    lowStockItems: { value: number; change: number };
+  todaySales: { value: number; change: number };
+  monthSales: { value: number; change: number };
+  pendingOrders: { value: number; change: number };
+  lowStockItems: { value: number; change: number };
 }
+
 export interface KeyMetrics {
-    salesTrend: {
-        percentChange: number;
-        data: { label: string; value: number }[];
-    };
-    topScannedProducts: {
-        totalScans: number;
-        change: number;
-        products: { id: string; name: string; percentage: number }[];
-    };
+  salesTrend: {
+    percentChange: number;
+    data: { label: string; value: number }[];
+  };
+  topScannedProducts: {
+    totalScans: number;
+    change: number;
+    products: { id: string; name: string; percentage: number }[];
+  };
 }
+
 export interface Transaction { /* ... */ }
 export interface SupportTicket { /* ... */ }
 
-
-// --- TIPO DE REGISTRO DE TIENDA (AJUSTADO A TU API REAL) ---
+/* ============================================================
+   🧾 REGISTRO DE TIENDA
+   ============================================================ */
 export interface StoreRegistrationData {
   business_name: string;
   owner_name: string;
@@ -158,14 +178,18 @@ export interface StoreRegistrationData {
   description: string;
   category_id: number;
   status: "pending";
-  
+
   user_name: string;
   user_email: string;
-  password: string,
+  password: string;
   phone: string | null;
   username: string | null;
   role: "store";
-  
+
   plan_id: string;
   payment_method_id: string;
 }
+
+/* ============================================================
+   🔚 FIN DEL ARCHIVO
+   ============================================================ */

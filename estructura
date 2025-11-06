@@ -51,7 +51,7 @@ prisma/
 │   ├── services/           # (Lógica de API)
 │   │   └── api.ts          # (Contiene TODAS las llamadas reales y simuladas)
 │   │
-│   ├── types/              # (Definiciones TypeScript)
+│   ├── types/              # (Definiciones TypeScript)A
 │   │   └── index.ts        # (Coincide con tu API real)
 │   │
 │   ├── App.tsx             # (El Router principal, con layouts separados)
