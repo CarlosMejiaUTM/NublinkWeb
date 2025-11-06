@@ -11,36 +11,134 @@ import type {
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
-// --- FUNCIÓN HELPER (fetchWithAuth) ---
-const fetchWithAuth = async (endpoint: string, options: RequestInit = {}) => {
-  const token = localStorage.getItem('authToken');
-  if (!token) {
-    window.location.href = '/login?sessionExpired=true';
-    throw new Error("No estás autenticado.");
-  }
-  const headers = new Headers(options.headers || {});
-  headers.append('Authorization', `Bearer ${token}`);
-  headers.append('Content-Type', 'application/json');
-  const response = await fetch(`${API_BASE_URL}${endpoint}`, { ...options, headers });
-  if (!response.ok) {
-    if (response.status === 401) { 
-      localStorage.clear();
-      window.location.href = '/login?sessionExpired=true'; 
-      throw new Error("Tu sesión ha expirado. Por favor, inicia sesión de nuevo.");
-    }
-    try {
-      const errorData = await response.json();
-      const errorMessage = Array.isArray(errorData.message) 
-          ? errorData.message.join(', ') 
-          : (errorData.message || `Error HTTP: ${response.status}`);
-      throw new Error(errorMessage);
-    } catch (e) {
-      throw new Error(`Error HTTP: ${response.status}`);
-    }
-  }
-  if (response.status === 204) { return null; }
-  return response.json();
+
+export interface AIRecommendation {
+  top_products: {
+    productname: string;
+    totalqty: number;
+    totalrevenue: number;
+    reason_1: string;
+    reason_2: string;
+  }[];
+  low_products: {
+    productname: string;
+    totalqty: number;
+    totalrevenue: number;
+    action_1: string;
+    action_2: string;
+  }[];
+  executive_summary: {
+    title: string;
+    summary: string;
+  }[];
+}
+
+// --- Helper Auth ---
+export const fetchWithAuth = async (endpoint: string, options: RequestInit = {}) => {
+  const token = localStorage.getItem("authToken");
+  if (!token) {
+    window.location.href = "/login?sessionExpired=true";
+    throw new Error("No estás autenticado.");
+  }
+
+  const headers = new Headers(options.headers || {});
+  headers.append("Authorization", `Bearer ${token}`);
+  headers.append("Content-Type", "application/json");
+
+  const response = await fetch(`${API_BASE_URL}${endpoint}`, { ...options, headers });
+
+  if (!response.ok) {
+    if (response.status === 401) {
+      localStorage.clear();
+      window.location.href = "/login?sessionExpired=true";
+      throw new Error("Tu sesión ha expirado. Por favor, inicia sesión de nuevo.");
+    }
+
+    try {
+      const errorData = await response.json();
+      const message = Array.isArray(errorData.message)
+        ? errorData.message.join(", ")
+        : errorData.message || `Error HTTP: ${response.status}`;
+      throw new Error(message);
+    } catch {
+      throw new Error(`Error HTTP: ${response.status}`);
+    }
+  }
+
+  if (response.status === 204) return null;
+  return response.json();
 };
+
+// --- Obtener ID de la tienda ---
+export const getStoreProfilew = async (): Promise<{ storeId: number }> => {
+  const endpoint = "/web/stores/mine/profile-with-store";
+  const response = await fetchWithAuth(endpoint, { method: "GET" });
+
+  if (!response?.data?.store?.id) {
+    throw new Error("No se pudo obtener el ID de la tienda");
+  }
+
+  return { storeId: response.data.store.id };
+};
+
+// --- Obtener el análisis IA ---
+export const getStoreAnalysis = async (storeId: number): Promise<AIRecommendation> => {
+  const endpoint = `https://lookappapi.onrender.com/analyze/${storeId}/stats`;
+
+  const res = await fetch(endpoint);
+  
+  if (!res.ok) {
+    throw new Error(`Error al obtener análisis: HTTP ${res.status}`);
+  }
+
+  const json = await res.json();
+  
+  if (!json.ai) {
+    throw new Error("La respuesta no contiene el campo 'ai'");
+  }
+
+  // Extraer JSON del texto markdown
+  const match = json.ai.match(/```json\s*([\s\S]*?)\s*```/);
+  
+  if (!match) {
+    throw new Error("No se pudo extraer el JSON del análisis");
+  }
+
+  const parsed = JSON.parse(match[1]);
+
+  // Normalizar los datos al formato esperado
+  const normalized: AIRecommendation = {
+    top_products: (parsed.top_products || []).map((p: any) => ({
+      productname: p.name,
+      totalqty: p.quantity_sold,
+      totalrevenue: p.revenue,
+      reason_1: p.reason_1,
+      reason_2: p.reason_2,
+    })),
+    low_products: (parsed.low_products || []).map((p: any) => ({
+      productname: p.name,
+      totalqty: p.quantity_sold,
+      totalrevenue: p.revenue,
+      action_1: p.action_1,
+      action_2: p.action_2,
+    })),
+    executive_summary: parsed.executive_summary || [],
+  };
+
+  return normalized;
+};
+
+// --- Función principal ---
+export const fetchAIRecommendations = async (): Promise<AIRecommendation> => {
+  const { storeId } = await getStoreProfilew();
+  const analysis = await getStoreAnalysis(storeId);
+  return analysis;
+};
+
+
+
+
+
 
 // --- FUNCIONES DE AUTH (REALES) ---
 export const loginUser = async (email: string, password: string): Promise<LoginResponse> => {
