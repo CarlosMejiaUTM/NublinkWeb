@@ -4,7 +4,7 @@
 import React, { useState, useEffect } from "react";
 import { Navigate, useLocation } from "react-router-dom";
 import type { User } from "../../types";
-import { getStoreProfile } from "../../services/api";
+import { getStoreProfile } from "../../services/api/store";
 
 /* ============================================================
    🔄 Spinner de carga
