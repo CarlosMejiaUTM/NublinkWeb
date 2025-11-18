@@ -1,14 +1,15 @@
 // FileName: App.tsx
 // Path: src/App.tsx
 
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import ProtectedRoute from './components/common/ProtectedRoute';
 import './styles/theme.css';
 
 
 // Layouts
-import DashboardLayout from './layouts/DashboardLayout';
 import AdminDashboardLayout from './layouts/AdminDashboardLayout';
+import DashboardLayout from './layouts/DashboardLayout';
+import ProtectedRecommendationsRoute from './layouts/ProtectedRecommendationsRoute';
 
 // Páginas Públicas
 import LandingPage from './pages/Landing';
@@ -16,25 +17,28 @@ import LoginPage from './pages/auth/Login';
 import StoreRegistrationPage from './pages/auth/StoreRegistration';
 
 // Páginas Tienda
-import StoreDashboardPage from './pages/store-panel/StoreDashboard';
-import StoreProductsPage from './pages/store-panel/StoreProducts';
-import StoreOrdersPage from './pages/store-panel/StoreOrders';
-import StoreRecommendationsPage from './pages/store-panel/StoreRecommendations';
-import StoreReportsPage from './pages/store-panel/StoreReports';
-import StorePromotionsPage from './pages/store-panel/StorePromotions';
-import StoreSettingsPage from './pages/store-panel/StoreSettings';
 import PendingStore from './pages/store-panel/PendingStore';
 import RejectedStore from './pages/store-panel/RejectedStore';
+import StoreDashboardPage from './pages/store-panel/StoreDashboard';
+import StoreOrdersPage from './pages/store-panel/StoreOrders';
+import StorePromotionsPage from './pages/store-panel/StorePromotions';
+import StoreRecommendationsPage from './pages/store-panel/StoreRecommendations';
+import StoreReportsPage from './pages/store-panel/StoreReports';
+import StoreSettingsPage from './pages/store-panel/StoreSettings';
+import StoreProductsPage from './pages/store-panel/products/StoreProducts';
 
 // Páginas Admin
-import AdminDashboardPage from './pages/admin-panel/AdminDashboard';
-import AdminStoresPage from './pages/admin-panel/AdminStores';
-import AdminUsersPage from './pages/admin-panel/AdminUsers';
-import AdminGlobalProductsPage from './pages/admin-panel/AdminGlobalProducts';
+import UpgradePlanPage from './layouts/UpgradePlanPage';
 import AdminAIPage from './pages/admin-panel/AdminAI';
+import AdminDashboardPage from './pages/admin-panel/AdminDashboard';
+import AdminGlobalProductsPage from './pages/admin-panel/AdminGlobalProducts';
 import AdminPaymentsPage from './pages/admin-panel/AdminPayments';
+import AdminStoreDetailPage from './pages/admin-panel/AdminStoreDetail';
+import AdminStoresPage from './pages/admin-panel/AdminStores';
 import AdminSupportPage from './pages/admin-panel/AdminSupport';
-import AdminStoreDetailPage from './pages/admin-panel/AdminStoreDetail'; // ✅ nueva página
+import AdminUsersPage from './pages/admin-panel/AdminUsers';
+import ProtectedReportRoute from './layouts/ProtectedReportRoute';
+import ProtectedPromotionsRoute from './layouts/ProtectedPromotionRoute';
 
 // === Helpers para Layouts ===
 const StoreLayoutWrapper = ({ children, pageTitle, pageDescription }: { children: React.ReactNode; pageTitle: string; pageDescription?: string }) => (
@@ -54,6 +58,8 @@ const AdminLayoutWrapper = ({ children, pageTitle, pageDescription }: { children
 );
 
 function App() {
+  console.log('🚀 App.tsx cargado correctamente');
+  
   return (
     <BrowserRouter>
       <Routes>
@@ -63,51 +69,108 @@ function App() {
         <Route path="/registro-tienda" element={<StoreRegistrationPage />} />
 
         {/*  PANEL TIENDA */}
-        {[
-          { path: 'dashboard', el: <StoreDashboardPage />, t: 'Inicio', d: 'Resumen del rendimiento de tu tienda.' },
-          { path: 'productos', el: <StoreProductsPage />, t: 'Productos', d: 'Administra el inventario de tu tienda.' },
-          { path: 'pedidos', el: <StoreOrdersPage />, t: 'Pedidos y Apartados', d: 'Gestiona las reservas y compras.' },
-          { path: 'recomendaciones', el: <StoreRecommendationsPage />, t: 'Recomendaciones IA', d: 'Optimiza precios, promociones y stock.' },
-          { path: 'reportes', el: <StoreReportsPage />, t: 'Reportes', d: 'Estadísticas detalladas de rendimiento.' },
-          { path: 'promociones', el: <StorePromotionsPage />, t: 'Promociones', d: 'Crea y gestiona descuentos.' },
-          { path: 'configuracion', el: <StoreSettingsPage />, t: 'Configuración', d: 'Administra el perfil de tu tienda y cuenta.' },
-        ].map(({ path, el, t, d }) => (
-          <Route
-            key={path}
-            path={`/tienda/${path}`}
-            element={<StoreLayoutWrapper pageTitle={t} pageDescription={d}>{el}</StoreLayoutWrapper>}
-          />
-        ))}
+        <Route
+          path="/tienda/dashboard"
+          element={<StoreLayoutWrapper pageTitle="Inicio" pageDescription="Resumen del rendimiento de tu tienda."><StoreDashboardPage /></StoreLayoutWrapper>}
+        />
+        <Route
+          path="/tienda/productos"
+          element={<StoreLayoutWrapper pageTitle="Productos" pageDescription="Administra el inventario de tu tienda."><StoreProductsPage /></StoreLayoutWrapper>}
+        />
+        <Route
+          path="/tienda/pedidos"
+          element={<StoreLayoutWrapper pageTitle="Pedidos y Apartados" pageDescription="Gestiona las reservas y compras."><StoreOrdersPage /></StoreLayoutWrapper>}
+        />
+       <Route
+          path="/tienda/reportes"
+          element={
+            <StoreLayoutWrapper pageTitle="Reportes IA" pageDescription="Dale un seguimiento a tus productos y visualiza datos reales.">
+              <ProtectedReportRoute>
+                <StoreReportsPage />
+              </ProtectedReportRoute>
+            </StoreLayoutWrapper>
+          }
+        />
+        
+        <Route
+          path="/tienda/reportes"
+          element={<StoreLayoutWrapper pageTitle="Reportes" pageDescription="Estadísticas detalladas de rendimiento."><StoreReportsPage /></StoreLayoutWrapper>}
+        />
+        <Route
+          path="/tienda/promociones"
+          element={
+            <StoreLayoutWrapper pageTitle="Promociones IA" pageDescription="Crea y gestiona descuentos.">
+              <ProtectedPromotionsRoute>
+                <StorePromotionsPage />
+              </ProtectedPromotionsRoute>
+            </StoreLayoutWrapper>
+          }
+        />
+        <Route
+          path="/tienda/configuracion"
+          element={<StoreLayoutWrapper pageTitle="Configuración" pageDescription="Administra el perfil de tu tienda y cuenta."><StoreSettingsPage /></StoreLayoutWrapper>}
+        />
+        
+        {/* ✅ RUTA DE MEJORAR PLAN - SIN ProtectedRecommendationsRoute */}
+        <Route
+          path="/tienda/mejorar-plan"
+          element={
+            <ProtectedRoute allowedRoles={['store']}>
+              <DashboardLayout pageTitle="Mejorar Plan" pageDescription="Actualiza tu suscripción a Premium.">
+                <UpgradePlanPage />
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
+
+        {/* ✅ RUTA DE RECOMENDACIONES - CON ProtectedRecommendationsRoute */}
+        <Route
+          path="/tienda/recomendaciones"
+          element={
+            <StoreLayoutWrapper pageTitle="Recomendaciones IA" pageDescription="Optimiza precios, promociones y stock.">
+              <ProtectedRecommendationsRoute>
+                <StoreRecommendationsPage />
+              </ProtectedRecommendationsRoute>
+            </StoreLayoutWrapper>
+          }
+        />
 
         {/* Estados de tienda */}
         <Route path="/tienda/pendiente" element={<ProtectedRoute allowedRoles={['store']}><PendingStore /></ProtectedRoute>} />
         <Route path="/tienda/rechazada" element={<ProtectedRoute allowedRoles={['store']}><RejectedStore /></ProtectedRoute>} />
 
         {/* PANEL ADMIN */}
-        {[
-          { path: 'dashboard', el: <AdminDashboardPage />, t: 'Dashboard de Administrador', d: 'Resumen global de la plataforma.' },
-          { path: 'tiendas', el: <AdminStoresPage />, t: 'Gestionar Tiendas', d: 'Aprobar o rechazar nuevas tiendas.' },
-          { path: 'usuarios', el: <AdminUsersPage />, t: 'Gestionar Usuarios', d: 'Ver todos los usuarios de la plataforma.' },
-          { path: 'productos-globales', el: <AdminGlobalProductsPage />, t: 'Productos Globales', d: 'Catálogo maestro de productos.' },
-          { path: 'ia-global', el: <AdminAIPage />, t: 'Módulo IA Global', d: 'Insights de tendencias de consumo.' },
-          { path: 'pagos', el: <AdminPaymentsPage />, t: 'Pagos y Comisiones', d: 'Monitor de transacciones y finanzas.' },
-          { path: 'soporte', el: <AdminSupportPage />, t: 'Soporte y Contenido', d: 'Gestionar tickets y FAQs.' },
-        ].map(({ path, el, t, d }) => (
-          <Route
-            key={path}
-            path={`/admin/${path}`}
-            element={<AdminLayoutWrapper pageTitle={t} pageDescription={d}>{el}</AdminLayoutWrapper>}
-          />
-        ))}
-
-        {/* Nueva ruta: Detalle de tienda */}
+        <Route
+          path="/admin/dashboard"
+          element={<AdminLayoutWrapper pageTitle="Dashboard de Administrador" pageDescription="Resumen global de la plataforma."><AdminDashboardPage /></AdminLayoutWrapper>}
+        />
+        <Route
+          path="/admin/tiendas"
+          element={<AdminLayoutWrapper pageTitle="Gestionar Tiendas" pageDescription="Aprobar o rechazar nuevas tiendas."><AdminStoresPage /></AdminLayoutWrapper>}
+        />
+        <Route
+          path="/admin/usuarios"
+          element={<AdminLayoutWrapper pageTitle="Gestionar Usuarios" pageDescription="Ver todos los usuarios de la plataforma."><AdminUsersPage /></AdminLayoutWrapper>}
+        />
+        <Route
+          path="/admin/productos-globales"
+          element={<AdminLayoutWrapper pageTitle="Productos Globales" pageDescription="Catálogo maestro de productos."><AdminGlobalProductsPage /></AdminLayoutWrapper>}
+        />
+        <Route
+          path="/admin/ia-global"
+          element={<AdminLayoutWrapper pageTitle="Módulo IA Global" pageDescription="Insights de tendencias de consumo."><AdminAIPage /></AdminLayoutWrapper>}
+        />
+        <Route
+          path="/admin/pagos"
+          element={<AdminLayoutWrapper pageTitle="Pagos y Comisiones" pageDescription="Monitor de transacciones y finanzas."><AdminPaymentsPage /></AdminLayoutWrapper>}
+        />
+        <Route
+          path="/admin/soporte"
+          element={<AdminLayoutWrapper pageTitle="Soporte y Contenido" pageDescription="Gestionar tickets y FAQs."><AdminSupportPage /></AdminLayoutWrapper>}
+        />
         <Route
           path="/admin/tienda/:id"
-          element={
-            <AdminLayoutWrapper pageTitle="Detalle de Tienda" pageDescription="Información y estadísticas de la tienda seleccionada.">
-              <AdminStoreDetailPage />
-            </AdminLayoutWrapper>
-          }
+          element={<AdminLayoutWrapper pageTitle="Detalle de Tienda" pageDescription="Información y estadísticas de la tienda seleccionada."><AdminStoreDetailPage /></AdminLayoutWrapper>}
         />
       </Routes>
     </BrowserRouter>

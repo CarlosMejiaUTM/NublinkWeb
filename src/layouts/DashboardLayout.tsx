@@ -1,24 +1,28 @@
 // FileName: DashboardLayout.tsx
 // Path: src/layouts/DashboardLayout.tsx
 
-import React, { useState, useEffect } from 'react';
-import { NavLink, useNavigate, Link } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { Link, NavLink, useNavigate } from 'react-router-dom';
 import nublinkLogoUrl from '../assets/nublink-logo.png';
-import type { User } from '../types';
 import Button from '../components/common/Button';
-import ConfirmModal from '../components/common/ConfirmModal'; // ✅ Importa tu componente modal
+import ConfirmModal from '../components/common/ConfirmModal';
+import AddProductForm from '../pages/store-panel/products/AddProductForm';
+import { fetchWithAuth } from '../services/api/helpers';
+import type { User } from '../types';
 
 // --- Iconos Heroicons 20 solid ---
-import { 
-  HomeIcon, 
-  CubeIcon as ProductIcon,
-  Cog6ToothIcon as SettingsIcon,
-  QuestionMarkCircleIcon as HelpIcon,
+import {
   SparklesIcon as AILightbulbIcon,
-  ChartBarIcon as ReportIcon,
-  TagIcon as PromotionIcon,
+  BuildingStorefrontIcon,
+  ChartBarIcon,
+  QuestionMarkCircleIcon as HelpIcon,
+  HomeIcon,
+  LightBulbIcon,
   ArrowLeftOnRectangleIcon as LogoutIcon,
-  BuildingStorefrontIcon
+  PlusIcon,
+  CubeIcon as ProductIcon,
+  TagIcon as PromotionIcon,
+  Cog6ToothIcon as SettingsIcon
 } from '@heroicons/react/20/solid';
 
 // --- Avatar del Usuario ---
@@ -34,11 +38,13 @@ const UserAvatar = ({ name }: { name: string }) => {
 const DashboardLayout = ({
   children,
   pageTitle,
-  pageDescription
+  pageDescription,
+  onProductsRefresh
 }: {
   children: React.ReactNode;
   pageTitle: string;
   pageDescription?: string;
+  onProductsRefresh?: () => void;
 }) => {
 
   const navLinkClasses = ({ isActive }: { isActive: boolean }) =>
@@ -54,9 +60,15 @@ const DashboardLayout = ({
   const [userEmail, setUserEmail] = useState('');
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
 
+  // ✅ Estado para verificar acceso a recomendaciones IA
+  const [hasAIAccess, setHasAIAccess] = useState<boolean | null>(null);
+
   // ✅ Modal de confirmación de logout
   const [confirmModalOpen, setConfirmModalOpen] = useState(false);
   const [confirmModalState, setConfirmModalState] = useState<'confirm' | 'success'>('confirm');
+
+  // ✅ Estado para controlar el modal de añadir producto
+  const [showAddProductForm, setShowAddProductForm] = useState(false);
 
   const navigate = useNavigate();
 
@@ -69,6 +81,65 @@ const DashboardLayout = ({
     setUserInitial(name.charAt(0).toUpperCase());
     setUserEmail(email);
     setUserRole(role === 'superadmin' ? 'Modo Administrador' : 'Modo Tienda');
+
+    // ✅ SOLUCIÓN FINAL: Verificar acceso desde la API directamente
+    const checkAIAccess = async () => {
+      try {
+        console.log('🚀 Verificando acceso a IA desde API...');
+        
+        // Llamar directamente a la API de suscripción
+        const result = await fetchWithAuth('/web/stores/mine/subscription', {
+          method: 'GET'
+        });
+        
+        console.log('📦 Respuesta de suscripción:', result);
+        
+        if (!result?.data) {
+          console.warn('⚠️ No hay datos de suscripción');
+          setHasAIAccess(false);
+          return;
+        }
+        
+        const subscription = result.data;
+        const plan = subscription.plan || subscription.plan_name || '';
+        const status = subscription.status || '';
+        
+        console.log('📋 Plan:', plan);
+        console.log('📋 Status:', status);
+        
+        // Verificar si es premium
+        const planLower = plan.toLowerCase();
+        const isPremium = planLower === 'premium' || 
+                         planLower.includes('premium') || 
+                         planLower.includes('ia');
+        
+        const isActive = status.toLowerCase() === 'active' || 
+                        status.toLowerCase() === 'activo';
+        
+        const hasAccess = isPremium && isActive;
+        
+        console.log('✅ isPremium:', isPremium);
+        console.log('✅ isActive:', isActive);
+        console.log('🎯 ACCESO FINAL:', hasAccess);
+        
+        setHasAIAccess(hasAccess);
+        
+        // Actualizar localStorage con la suscripción
+        const userStr = localStorage.getItem('user');
+        if (userStr) {
+          const user = JSON.parse(userStr);
+          user.subscription = subscription;
+          localStorage.setItem('user', JSON.stringify(user));
+          console.log('💾 Usuario actualizado en localStorage con suscripción');
+        }
+        
+      } catch (error) {
+        console.error('❌ Error al verificar acceso:', error);
+        setHasAIAccess(false);
+      }
+    };
+
+    checkAIAccess();
   }, []);
 
   const handleLogout = () => {
@@ -88,6 +159,44 @@ const DashboardLayout = ({
       navigate('/login');
     }, 1500);
   };
+
+  // ✅ Función para abrir el modal de añadir producto
+  const handleOpenAddProduct = () => {
+    setShowAddProductForm(true);
+  };
+
+  // ✅ Función para cerrar el modal de añadir producto
+  const handleCloseAddProduct = () => {
+    setShowAddProductForm(false);
+  };
+
+const handleProductAdded = () => {
+  console.log('🎯 handleProductAdded llamado en DashboardLayout');
+  setShowAddProductForm(false);
+  
+  // Disparar evento personalizado para notificar a la página de productos
+  console.log('📢 Disparando evento productAdded');
+  const event = new CustomEvent('productAdded', { 
+    detail: { timestamp: Date.now() } 
+  });
+  window.dispatchEvent(event);
+  
+  // Si hay una función de refresh, llamarla (para cuando estamos en la página de productos)
+  if (onProductsRefresh) {
+    console.log('🔄 Llamando onProductsRefresh');
+    onProductsRefresh();
+  }
+  
+  // Solo navegar si NO estamos en la página de productos
+  const currentPath = window.location.pathname;
+  console.log('📍 Ruta actual:', currentPath);
+  if (!currentPath.includes('/tienda/productos')) {
+    console.log('➡️ Navegando a productos');
+    navigate('/tienda/productos');
+  } else {
+    console.log('✅ Ya estamos en productos, no navegamos');
+  }
+};
 
   return (
     <div className="flex h-screen bg-bg-base font-sans overflow-hidden">
@@ -113,19 +222,113 @@ const DashboardLayout = ({
           {/* Navegación */}
           <nav className="mt-2">
             <ul className="space-y-1.5">
-              <li><NavLink to="/tienda/dashboard" className={navLinkClasses} end><HomeIcon className="w-5 h-5" /> <span>Inicio</span></NavLink></li>
-              <li><NavLink to="/tienda/productos" className={navLinkClasses}><ProductIcon className="w-5 h-5" /> <span>Productos</span></NavLink></li>
-              <li><NavLink to="/tienda/recomendaciones" className={navLinkClasses}><AILightbulbIcon className="w-5 h-5" /> <span>Recomendaciones</span></NavLink></li>
-              <li><NavLink to="/tienda/reportes" className={navLinkClasses}><ReportIcon className="w-5 h-5" /> <span>Reportes</span></NavLink></li>
-              <li><NavLink to="/tienda/promociones" className={navLinkClasses}><PromotionIcon className="w-5 h-5" /> <span>Promociones</span></NavLink></li>
-              <li><NavLink to="/tienda/configuracion" className={navLinkClasses}><SettingsIcon className="w-5 h-5" /> <span>Configuración</span></NavLink></li>
+              <li>
+                <NavLink to="/tienda/dashboard" className={navLinkClasses} end>
+                  <HomeIcon className="w-5 h-5" /> 
+                  <span>Inicio</span>
+                </NavLink>
+              </li>
+              
+              <li>
+                <NavLink to="/tienda/productos" className={navLinkClasses}>
+                  <ProductIcon className="w-5 h-5" /> 
+                  <span>Productos</span>
+                </NavLink>
+              </li>
+              
+              {/* ✅ RECOMENDACIONES - Solo visible si tiene acceso */}
+              {hasAIAccess !== null && (
+                hasAIAccess ? (
+                  <li>
+                    <NavLink to="/tienda/recomendaciones" className={navLinkClasses}>
+                      <LightBulbIcon className="w-5 h-5" /> 
+                      <span>Recomendaciones AI</span>
+                      <AILightbulbIcon className="w-4 h-4 ml-auto text-purple-500" />
+                    </NavLink>
+                  </li>
+                ) : (
+                  <li>
+                    <div 
+                      className="flex items-center gap-3 px-4 py-2.5 rounded-lg text-text-muted/50 cursor-not-allowed opacity-60"
+                      title="Mejora tu plan para acceder a Recomendaciones AI"
+                    >
+                      <span>Recomendaciones AI</span>
+                      <span className="ml-auto text-xs bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-full font-semibold">
+                        Premium
+                      </span>
+                    </div>
+                  </li>
+                )
+              )}
+              
+              <li>
+                {hasAIAccess !== null && (
+                  hasAIAccess ? (
+                    <li>
+                      <NavLink to="/tienda/reportes" className={navLinkClasses}>
+                        <ChartBarIcon className="w-5 h-5" /> 
+                        <span>Reportes AI</span>
+                        <AILightbulbIcon className="w-4 h-4 ml-auto text-purple-500" />
+                      </NavLink>
+                    </li>
+                  ) : (
+                    <li>
+                      <div 
+                        className="flex items-center gap-3 px-4 py-2.5 rounded-lg text-text-muted/50 cursor-not-allowed opacity-60"
+                        title="Mejora tu plan para acceder a Reportes AI"
+                      >
+                        <span>Reportes AI</span>
+                        <span className="ml-auto text-xs bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-full font-semibold">
+                          Premium
+                        </span>
+                      </div>
+                    </li>
+                  )
+                )}
+              </li>
+
+              <li>
+                {hasAIAccess !== null && (
+                  hasAIAccess ? (
+                    <li>
+                      <NavLink to="/tienda/promociones" className={navLinkClasses}>
+                        <PromotionIcon className="w-5 h-5" /> 
+                        <span>Promociones AI</span>
+                        <AILightbulbIcon className="w-4 h-4 ml-auto text-purple-500" />
+                      </NavLink>
+                    </li>
+                  ) : (
+                    <li>
+                      <div 
+                        className="flex items-center gap-3 px-4 py-2.5 rounded-lg text-text-muted/50 cursor-not-allowed opacity-60"
+                        title="Mejora tu plan para acceder a Promociones AI"
+                      >
+                        <span>Promociones AI</span>
+                        <span className="ml-auto text-xs bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-full font-semibold">
+                          Premium
+                        </span>
+                      </div>
+                    </li>
+                  )
+                )}
+              </li>
+              
+              <li>
+                <NavLink to="/tienda/configuracion" className={navLinkClasses}>
+                  <SettingsIcon className="w-5 h-5" /> 
+                  <span>Configuración</span>
+                </NavLink>
+              </li>
             </ul>
           </nav>
         </div>
 
         {/* Footer Sidebar */}
         <div className="mt-auto border-t border-line-light p-4">
-          <NavLink to="/tienda/ayuda" className={navLinkClasses}><HelpIcon className="w-5 h-5" /> <span>Ayuda</span></NavLink>
+          <NavLink to="/tienda/ayuda" className={navLinkClasses}>
+            <HelpIcon className="w-5 h-5" /> 
+            <span>Ayuda</span>
+          </NavLink>
         </div>
       </aside>
 
@@ -138,13 +341,16 @@ const DashboardLayout = ({
           </div>
              
           <div className="flex items-center gap-4 relative">
-            <Button variant="secondary" size="sm" className="hidden sm:flex">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
-                <path d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z" />
-              </svg>
+            <Button 
+              variant="secondary" 
+              size="sm" 
+              className="hidden sm:flex items-center gap-2"
+              onClick={handleOpenAddProduct}
+            >
+              <PlusIcon className="w-4 h-4" />
               Añadir Producto
             </Button>
-                
+    
             <button 
               onClick={() => setIsProfileMenuOpen(prev => !prev)} 
               className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center text-text-main font-semibold cursor-pointer border border-line-light focus:outline-none focus:ring-2 focus:ring-primary transition-transform duration-200 hover:scale-110"
@@ -209,6 +415,14 @@ const DashboardLayout = ({
         onConfirm={confirmLogout}
         onCancel={() => setConfirmModalOpen(false)}
       />
+
+      {/* ✅ Modal de añadir producto */}
+      {showAddProductForm && (
+        <AddProductForm
+          onClose={handleCloseAddProduct}
+          onSubmit={handleProductAdded}
+        />
+      )}
     </div>
   );
 };

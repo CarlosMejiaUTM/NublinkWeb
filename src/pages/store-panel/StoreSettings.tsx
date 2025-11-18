@@ -15,102 +15,122 @@ import {
     CreditCardIcon,
     BuildingStorefrontIcon,
     PhoneIcon,
-    CheckCircleIcon,
     ExclamationTriangleIcon
 } from '@heroicons/react/20/solid';
+import AddressAutocomplete from '@/components/common/AddressAutocomplete';
+import { useNavigate } from 'react-router-dom';
 
-// --- (Spinner y Error) ---
-const LoadingSpinner = () => (
-    <div className="flex justify-center items-center h-48">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
-    </div>
-);
+  // --- (Spinner y Error) ---
+  const LoadingSpinner = () => (
+      <div className="flex justify-center items-center h-48">
+      <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-primary"></div>
+      </div>
+  );
 
-const ErrorMessage = ({ message }: { message: string }) => (
-    <div className="p-4 text-center text-red-700 bg-red-100 rounded-lg border border-red-200 flex items-center gap-3">
-        <ExclamationTriangleIcon className="w-6 h-6 flex-shrink-0"/>
-        <div className="text-left">
-            <p className="font-semibold">Error al Cargar</p>
-            <p className="text-sm">{message}</p>
-        </div>
-    </div>
-);
-
-const SuccessMessage = ({ message }: { message: string }) => (
-    <div className="p-3 text-center text-green-700 bg-green-100 rounded-lg border border-green-200">
-        <p className="font-semibold flex items-center justify-center gap-2">
-            <CheckCircleIcon className="w-5 h-5" />
-            {message}
-        </p>
-    </div>
-);
-
-type SettingsTab = 'profile' | 'account' | 'location' | 'payments';
-type ModalState = 'confirm' | 'loading' | 'success' | 'error' | 'closed';
-
-const StoreSettingsPage = () => {
-    const [activeTab, setActiveTab] = useState<SettingsTab>('profile');
-
-    // --- Estados ---
-    const [profileData, setProfileData] = useState<Partial<User & Store>>({});
-    const [originalStoreId, setOriginalStoreId] = useState<number | null>(null);
-    const [isLoadingProfile, setIsLoadingProfile] = useState(true);
-    const [profileError, setProfileError] = useState<string | null>(null);
-
-    const [subscription, setSubscription] = useState<any>(null);
-    const [isLoadingSub, setIsLoadingSub] = useState(false);
-    const [subError, setSubError] = useState<string | null>(null);
-
-    // --- Estados para el modal unificado ---
-    const [modalState, setModalState] = useState<ModalState>('closed');
-    const [modalMessage, setModalMessage] = useState("");
-    const [modalTitle, setModalTitle] = useState("");
-
-    // --- Cargar perfil ---
-    useEffect(() => {
-        const loadProfile = async () => {
-            try {
-                setIsLoadingProfile(true);
-                setProfileError(null);
-
-                const userData = await getStoreProfile();
-
-                // Combinar datos de tienda y usuario (sin validación estricta)
-                let combinedData;
-                
-                if (userData.store) {
-                    // Si tiene store, combinar
-                    combinedData = { 
-                        ...userData,
-                        ...userData.store,
-                        user_id: userData.id,
-                        store_id: userData.store.id,
-                    };
-                    setOriginalStoreId(userData.store.id);
-                } else {
-                    // Si no tiene store anidado, asumir que los datos están en el nivel superior
-                    combinedData = {
-                        ...userData,
-                        user_id: userData.id,
-                    };
-                    setOriginalStoreId(userData.id);
-                }
+  const ErrorMessage = ({ message }: { message: string }) => (
+      <div className="p-4 text-center text-red-700 bg-red-100 rounded-lg border border-red-200 flex items-center gap-3">
+          <ExclamationTriangleIcon className="w-6 h-6 flex-shrink-0"/>
+          <div className="text-left">
+              <p className="font-semibold">Error al Cargar</p>
+              <p className="text-sm">{message}</p>
+          </div>
+      </div>
+  );
 
 
-                setProfileData(combinedData);
-                
+  type SettingsTab = 'profile' | 'account' | 'location' | 'payments';
+  type ModalState = 'confirm' | 'loading' | 'success' | 'error' | 'closed';
 
-            } catch (err) {
-                setProfileError(err instanceof Error ? err.message : "Error desconocido");
-                setProfileData({});
-                setOriginalStoreId(null);
-            } finally {
-                setIsLoadingProfile(false);
+  const StoreSettingsPage = () => {
+      const [activeTab, setActiveTab] = useState<SettingsTab>('profile');
+
+      // --- Estados ---
+const [profileData, setProfileData] = useState<Partial<User & Store & { 
+  user_id?: number; 
+  store_id?: number;
+}>>({});
+      const navigate = useNavigate();
+      const [originalStoreId, setOriginalStoreId] = useState<number | null>(null);
+      const [isLoadingProfile, setIsLoadingProfile] = useState(true);
+      const [profileError, setProfileError] = useState<string | null>(null);
+
+      const [subscription, setSubscription] = useState<any>(null);
+      const [isLoadingSub, setIsLoadingSub] = useState(false);
+      const [subError, setSubError] = useState<string | null>(null);
+
+      // --- Estados para el modal unificado ---
+      const [modalState, setModalState] = useState<ModalState>('closed');
+      const [modalMessage, setModalMessage] = useState("");
+      const [modalTitle, setModalTitle] = useState("");
+
+      // --- Cargar perfil ---
+// PRIMERO: Actualiza el useEffect de loadProfile:
+
+useEffect(() => {
+    const loadProfile = async () => {
+        try {
+            setIsLoadingProfile(true);
+            setProfileError(null);
+
+            const userData = await getStoreProfile();
+
+            // ✅ CORRECCIÓN: Definir tipo explícito y convertir null a undefined
+            let combinedData: Partial<User & Store & { 
+                user_id?: number; 
+                store_id?: number;
+            }>;
+            
+            if (userData.store) {
+                combinedData = { 
+                    // Propiedades del usuario
+                    id: userData.id,
+                    email: userData.email,
+                    name: userData.name,
+                    phone: userData.phone ?? undefined, // ✅ Convertir null a undefined
+                    role: userData.role,
+                    user_id: userData.id,
+                    
+                    // Propiedades de la tienda
+                    business_name: userData.store.business_name,
+                    owner_name: userData.store.owner_name,
+                    address: userData.store.address,
+                    description: userData.store.description ?? undefined,
+                    category: userData.store.category ?? undefined,
+                    category_id: userData.store.category_id ?? undefined,
+                    status: userData.store.status,
+                    is_verified: userData.store.is_verified,
+                    store_id: userData.store.id,
+                    latitude: userData.store.latitud || userData.store.latitude,
+                    longitude: userData.store.longitud || userData.store.longitude,
+                    map_url: userData.store.map_url ?? undefined,
+                    logo_url: userData.store.logo_url ?? undefined,
+                    schedule: userData.store.schedule ?? undefined,
+                };
+                setOriginalStoreId(userData.store.id);
+            } else {
+                combinedData = {
+                    id: userData.id,
+                    email: userData.email,
+                    name: userData.name,
+                    phone: userData.phone ?? undefined, // ✅ Convertir null a undefined
+                    role: userData.role,
+                    user_id: userData.id,
+                };
+                setOriginalStoreId(userData.id);
             }
-        };
-        loadProfile();
-    }, []);
 
+            setProfileData(combinedData);
+
+        } catch (err) {
+            setProfileError(err instanceof Error ? err.message : "Error desconocido");
+            setProfileData({});
+            setOriginalStoreId(null);
+        } finally {
+            setIsLoadingProfile(false);
+        }
+    };
+    loadProfile();
+}, []);
     // --- Cargar suscripción ---
     useEffect(() => {
         const loadSubscription = async () => {
@@ -133,96 +153,87 @@ const StoreSettingsPage = () => {
     }, [activeTab, subscription, profileError]);
 
     // --- Guardar perfil (lógica real) ---
-    const performSave = async () => {
+const performSave = async () => {
+    setModalState('loading');
+    setModalTitle('Guardando cambios...');
+    setModalMessage('Por favor espera mientras actualizamos tu perfil.');
 
-        // Cambiar a estado de loading
-        setModalState('loading');
-        setModalTitle('Guardando cambios...');
-        setModalMessage('Por favor espera mientras actualizamos tu perfil.');
+    try {
+        const dataToUpdate: Partial<User & Store> = {
+            // Datos del usuario
+            name: profileData.name,
+            phone: profileData.phone,
+            
+            // Datos de la tienda
+            business_name: profileData.business_name,
+            owner_name: profileData.owner_name,
+            address: profileData.address,
+            description: profileData.description,
+            latitude: profileData.latitude,
+            longitude: profileData.longitude,
+        };
 
-        try {
-            // Preparar datos para enviar
-            const dataToUpdate: Partial<User & Store> = {
-                // Datos del usuario
-                name: profileData.name,
-                phone: profileData.phone,
-                
-                // Datos de la tienda
-                business_name: profileData.business_name,
-                owner_name: profileData.owner_name,
-                address: profileData.address,
-                description: profileData.description,
-                latitude: profileData.latitude,
-                longitude: profileData.longitude,
-            };
-
-
-            const updatedUser = await updateStoreProfile(dataToUpdate);
-            
-
-            // Verificar que la respuesta sea válida
-            if (!updatedUser) {
-                throw new Error("El servidor no devolvió datos");
-            }
-
-            // Combinar datos actualizados de forma segura
-            let combinedData;
-            
-            if (updatedUser.store) {
-                // Si tiene store, combinar
-                combinedData = { 
-                    ...updatedUser,
-                    ...updatedUser.store,
-                    user_id: updatedUser.id,
-                    store_id: updatedUser.store.id,
-                };
-            } else {
-                // Si no tiene store, usar profileData anterior pero actualizar campos cambiados
-                combinedData = {
-                    ...profileData,
-                    ...updatedUser,
-                };
-            }
-
-
-            setProfileData(combinedData);
-            
-            // Actualizar originalStoreId si cambió
-            if (updatedUser.store?.id) {
-                setOriginalStoreId(updatedUser.store.id);
-            } else if (combinedData.store_id) {
-                setOriginalStoreId(combinedData.store_id);
-            }
-            
-            // Mostrar modal de éxito
-            setModalState('success');
-            setModalTitle('¡Cambios guardados!');
-            setModalMessage('El perfil de tu tienda se ha actualizado exitosamente.');
-            
-            // Cerrar el modal después de 5 segundos
-            setTimeout(() => {
-                setModalState('closed');
-            }, 5000);
-            
-        } catch (err) {
-            
-            let errorMsg = "Error al guardar los cambios.";
-            
-            if (err instanceof Error) {
-                errorMsg = err.message;
-            }
-            
-            // Mostrar modal de error
-            setModalState('error');
-            setModalTitle('Error al guardar');
-            setModalMessage(errorMsg);
-            
-            // Cerrar el modal después de 5 segundos
-            setTimeout(() => {
-                setModalState('closed');
-            }, 5000);
+        const updatedUser = await updateStoreProfile(dataToUpdate);
+        
+        if (!updatedUser) {
+            throw new Error("El servidor no devolvió datos");
         }
-    };
+
+        // ✅ CORRECCIÓN: Mapear correctamente la respuesta con tipo explícito
+        let combinedData: Partial<User & Store & { 
+            user_id?: number; 
+            store_id?: number;
+        }>;
+        
+        if (updatedUser.store) {
+            combinedData = { 
+                ...(updatedUser as any), // Casting temporal para evitar conflictos de tipos
+                ...updatedUser.store,
+                user_id: updatedUser.id,
+                store_id: updatedUser.store.id,
+                // Mapear latitud/longitud correctamente
+                latitude: updatedUser.store.latitud || updatedUser.store.latitude,
+                longitude: updatedUser.store.longitud || updatedUser.store.longitude,
+            };
+        } else {
+            combinedData = {
+                ...profileData,
+                ...(updatedUser as any), // Casting temporal para evitar conflictos de tipos
+            };
+        }
+
+        setProfileData(combinedData);
+        
+        if (updatedUser.store?.id) {
+            setOriginalStoreId(updatedUser.store.id);
+        } else if (combinedData.store_id) {
+            setOriginalStoreId(combinedData.store_id);
+        }
+        
+        setModalState('success');
+        setModalTitle('¡Cambios guardados!');
+        setModalMessage('El perfil de tu tienda se ha actualizado exitosamente.');
+        
+        setTimeout(() => {
+            setModalState('closed');
+        }, 5000);
+        
+    } catch (err) {
+        let errorMsg = "Error al guardar los cambios.";
+        
+        if (err instanceof Error) {
+            errorMsg = err.message;
+        }
+        
+        setModalState('error');
+        setModalTitle('Error al guardar');
+        setModalMessage(errorMsg);
+        
+        setTimeout(() => {
+            setModalState('closed');
+        }, 5000);
+    }
+};
 
     // --- Handler del formulario (muestra modal de confirmación) ---
     const handleProfileSave = () => {
@@ -347,182 +358,236 @@ const StoreSettingsPage = () => {
                         </div>
                     );
 
-               case 'location':
-                      return (
-                        <div className="space-y-6 max-w-3xl">
-                          {/* --- Encabezado --- */}
+                case 'location':
+                  return (
+                    <div className="space-y-6 max-w-3xl">
+                      {/* --- Encabezado --- */}
+                      <div className="flex items-center gap-3">
+                        <MapPinIcon className="w-6 h-6 text-primary" />
+                        <h3 className="text-xl font-semibold text-text-main">
+                          Ubicación de tu Tienda
+                        </h3>
+                      </div>
+
+                      {/* --- Descripción --- */}
+                      <p className="text-sm text-text-muted">
+                        Aquí puedes visualizar y actualizar la ubicación de tu tienda. Busca una dirección o arrastra el pin en el mapa.
+                      </p>
+
+                      {/* --- Tarjeta principal --- */}
+                      <div className="bg-white dark:bg-secondary border border-line-light rounded-2xl shadow-md overflow-hidden transition-all hover:shadow-lg">
+                        {/* Header */}
+                        <div className="flex items-center justify-between px-5 py-4 border-b border-line-light">
                           <div className="flex items-center gap-3">
-                            <MapPinIcon className="w-6 h-6 text-primary" />
-                            <h3 className="text-xl font-semibold text-text-main">
-                              Ubicación de tu Tienda
-                            </h3>
-                          </div>
-                    
-                          {/* --- Descripción --- */}
-                          <p className="text-sm text-text-muted">
-                            Aquí puedes visualizar y actualizar la ubicación de tu tienda. Esto ayuda
-                            a que los clientes te encuentren fácilmente dentro del mapa de la aplicación.
-                          </p>
-                    
-                          {/* --- Tarjeta principal --- */}
-                          <div className="bg-white dark:bg-secondary border border-line-light rounded-2xl shadow-md overflow-hidden transition-all hover:shadow-lg">
-                            {/* Header */}
-                            <div className="flex items-center justify-between px-5 py-4 border-b border-line-light">
-                              <div className="flex items-center gap-3">
-                                <div className="bg-primary/10 p-2 rounded-lg">
-                                  <BuildingStorefrontIcon className="w-5 h-5 text-primary" />
-                                </div>
-                                <div>
-                                  <h4 className="text-base font-semibold text-text-main">
-                                    Dirección actual
-                                  </h4>
-                                  <p className="text-xs text-text-muted">
-                                    {profileData.business_name || "Tienda sin nombre registrado"}
-                                  </p>
-                                </div>
-                              </div>
+                            <div className="bg-primary/10 p-2 rounded-lg">
+                              <BuildingStorefrontIcon className="w-5 h-5 text-primary" />
                             </div>
-                    
-                            {/* Contenido principal */}
-                            <div className="p-5 space-y-5">
-                              {/* Dirección */}
-                              <div className="bg-surface rounded-xl border border-line-light px-4 py-3">
-                                <p className="text-sm text-text-main font-medium">
-                                  {profileData.address || "Sin dirección registrada"}
-                                </p>
-                                <p className="text-xs text-text-muted mt-1">
-                                  {profileData.category ? `Categoría: ${profileData.category}` : ""}
-                                </p>
-                              </div>
-                    
-                              {/* Mapa */}
-                              <div className="rounded-xl overflow-hidden border border-line-light">
-                                <LocationPickerMap
-                                  onLocationSelect={({ lat, lng }) => {
-                                    // Actualiza coordenadas en el perfil local
-                                    setProfileData((prev) => ({
-                                      ...prev,
-                                      latitude: lat,
-                                      longitude: lng,
-                                    }));
-                                  }}
-                                  initialCenter={
-                                    profileData.latitude && profileData.longitude
-                                      ? [profileData.latitude, profileData.longitude]
-                                      : [20.9674, -89.5926] // Mérida por defecto
-                                  }
-                                />
-                              </div>
-                            </div>
-                              
-                            {/* Footer con botón */}
-                            <div className="px-5 py-4 border-t border-line-light bg-surface flex justify-end">
-                              <button
-                                onClick={handleProfileSave}
-                                disabled={modalState === 'loading'}
-                                className={`px-5 py-2.5 rounded-lg font-medium transition-colors ${
-                                  modalState === 'loading'
-                                    ? 'bg-primary/60 cursor-not-allowed text-white'
-                                    : 'bg-primary text-white hover:bg-primary-dark'
-                                }`}
-                              >
-                                {modalState === 'loading' ? 'Guardando...' : 'Guardar Cambios'}
-                              </button>
+                            <div>
+                              <h4 className="text-base font-semibold text-text-main">
+                                Dirección de tu tienda
+                              </h4>
+                              <p className="text-xs text-text-muted">
+                                {profileData.business_name || "Tienda sin nombre registrado"}
+                              </p>
                             </div>
                           </div>
                         </div>
-                      );
 
+                        {/* Contenido principal */}
+                        <div className="p-5 space-y-5">
+                          {/* Campo de dirección con autocompletado */}
+                          <div>
+                            <AddressAutocomplete
+                              value={profileData.address || ''}
+                              onChange={(address) => {
+                                setProfileData((prev) => ({ ...prev, address }));
+                              }}
+                              onSelectLocation={({ lat, lng, address }) => {
+                                setProfileData((prev) => ({
+                                  ...prev,
+                                  address,
+                                  latitude: lat,
+                                  longitude: lng,
+                                }));
+                              }}
+                              placeholder="Busca y selecciona tu dirección..."
+                            />
+                            {profileData.category && (
+                              <p className="text-xs text-text-muted mt-2">
+                                Categoría: {profileData.category}
+                              </p>
+                            )}
+                          </div>
 
-              case 'payments':
-                      return (
-                        <div className="space-y-6 max-w-2xl mx-auto">
-                          <h3 className="text-xl font-semibold mb-4 text-text-main">
-                            Pagos y Suscripción
-                          </h3>
-                    
-                          {isLoadingSub ? (
-                            <LoadingSpinner />
-                          ) : subError ? (
-                            <ErrorMessage message={subError} />
-                          ) : subscription && subscription.data ? (
-                            <div className="relative bg-white dark:bg-secondary rounded-2xl shadow-lg border border-line-light p-6 transition-all hover:shadow-xl">
-                              {/* Encabezado */}
-                              <div className="flex items-center justify-between mb-6">
-                                <div>
-                                  <h4 className="text-lg font-bold text-text-main flex items-center gap-2">
-                                    {subscription.data.plan === "premium"
-                                      ? "Plan IA Premium"
-                                      : "Plan Básico"}
-                                  </h4>
-                                  <p className="text-sm text-text-muted">
-                                    {subscription.data.plan === "premium"
-                                      ? "Incluye analítica predictiva y funciones avanzadas."
-                                      : "Funciones esenciales para tu tienda en el mapa."}
-                                  </p>
-                                </div>
-                                <div
-                                  className={`px-3 py-1 text-xs font-semibold rounded-full ${
-                                    subscription.data.status === "active"
-                                      ? "bg-green-100 text-green-700"
-                                      : "bg-gray-100 text-gray-600"
-                                  }`}
-                                >
-                                  {subscription.data.status === "active" ? "Activo" : "Inactivo"}
-                                </div>
+                          {/* Coordenadas actuales */}
+                          <div className="bg-surface rounded-xl border border-line-light px-4 py-3">
+                            <p className="text-xs font-semibold text-text-muted mb-2">Coordenadas seleccionadas:</p>
+                            <div className="grid grid-cols-2 gap-3 text-sm">
+                              <div>
+                                <span className="text-text-muted">Latitud:</span>{' '}
+                                <span className="font-mono text-text-main">
+                                  {profileData.latitude ? Number(profileData.latitude).toFixed(6) : 'No definida'}
+                                </span>
                               </div>
-                              
-                              {/* Cuerpo */}
-                              <div className="grid sm:grid-cols-2 gap-4 mb-5">
-                                <div className="bg-secondary/40 rounded-xl p-3">
-                                  <p className="text-xs text-text-muted mb-1">Inicio del período</p>
-                                  <p className="font-medium text-text-main">
-                                    {new Date(subscription.data.current_period_start).toLocaleDateString(
-                                      "es-MX"
-                                    )}
-                                  </p>
-                                </div>
-                                
-                                <div className="bg-secondary/40 rounded-xl p-3">
-                                  <p className="text-xs text-text-muted mb-1">Fin del período</p>
-                                  <p className="font-medium text-text-main">
-                                    {new Date(subscription.data.current_period_end).toLocaleDateString(
-                                      "es-MX"
-                                    )}
-                                  </p>
-                                </div>
-                                
-                                <div className="bg-secondary/40 rounded-xl p-3 col-span-2">
-                                  <p className="text-xs text-text-muted mb-1">ID de Suscripción</p>
-                                  <p className="font-mono text-xs text-text-muted truncate">
-                                    {subscription.data.stripe_subscription_id}
-                                  </p>
-                                </div>
+                              <div>
+                                <span className="text-text-muted">Longitud:</span>{' '}
+                                <span className="font-mono text-text-main">
+                                  {profileData.longitude ? Number(profileData.longitude).toFixed(6) : 'No definida'}
+                                </span>
                               </div>
-                                
-                              {/* Acciones */}
-                              <div className="flex justify-between items-center border-t border-line-light pt-4">
-                                <div className="text-sm text-text-muted">
-                                  Próximo cobro automático al finalizar el período.
-                                </div>
+                            </div>
+                          </div>
+
+                          {/* Mapa - ✅ ACTUALIZADO para recibir y actualizar la dirección */}
+                          <div className="rounded-xl overflow-hidden border border-line-light">
+                            <LocationPickerMap
+                              onLocationSelect={({ lat, lng, address }) => {
+                                // ✅ CORRECCIÓN CRÍTICA: Actualizar coordenadas Y dirección
+                                setProfileData((prev) => ({
+                                  ...prev,
+                                  latitude: lat,
+                                  longitude: lng,
+                                  // Solo actualizar la dirección si se obtuvo una válida
+                                  ...(address && { address }),
+                                }));
+                              }}
+                              initialCenter={
+                                profileData.latitude && profileData.longitude
+                                  ? [Number(profileData.latitude), Number(profileData.longitude)]
+                                  : [20.9674, -89.5926] // Mérida por defecto
+                              }
+                              showAddressInPopup={true}
+                            />
+                          </div>
+
+                          <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
+                            <p className="text-xs text-blue-700 dark:text-blue-900">
+                              💡 <strong>Consejo:</strong> Puedes buscar una dirección usando el campo de texto o hacer clic/arrastrar 
+                              el marcador en el mapa. Las coordenadas y la dirección se sincronizarán automáticamente.
+                            </p>
+                          </div>
+                        </div>
+                          
+                        {/* Footer con botón */}
+                        <div className="px-5 py-4 border-t border-line-light bg-surface flex justify-end">
+                          <button
+                            onClick={handleProfileSave}
+                            disabled={modalState === 'loading'}
+                            className={`px-5 py-2.5 rounded-lg font-medium transition-colors ${
+                              modalState === 'loading'
+                                ? 'bg-primary/60 cursor-not-allowed text-white'
+                                : 'bg-primary text-white hover:bg-primary-dark'
+                            }`}
+                          >
+                            {modalState === 'loading' ? 'Guardando...' : 'Guardar Cambios'}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                case 'payments':
+                  return (
+                    <div className="space-y-6 max-w-2xl mx-auto">
+                      <h3 className="text-xl font-semibold mb-4 text-text-main">
+                        Pagos y Suscripción
+                      </h3>
+
+                      {isLoadingSub ? (
+                        <LoadingSpinner />
+                      ) : subError ? (
+                        <ErrorMessage message={subError} />
+                      ) : subscription && subscription.data ? (
+                        <div className="relative bg-white dark:bg-secondary rounded-2xl shadow-lg border border-line-light p-6 transition-all hover:shadow-xl">
+                          
+                          {/* Encabezado */}
+                          <div className="flex items-center justify-between mb-6">
+                            <div>
+                              <h4 className="text-lg font-bold text-text-main flex items-center gap-2">
+                                {subscription.data.plan === "premium"
+                                  ? "Plan IA Premium"
+                                  : "Plan Básico"}
+                              </h4>
+                              <p className="text-sm text-text-muted">
+                                {subscription.data.plan === "premium"
+                                  ? "Incluye analítica predictiva y funciones avanzadas."
+                                  : "Funciones esenciales para tu tienda en el mapa."}
+                              </p>
+                            </div>
+                            <div
+                              className={`px-3 py-1 text-xs font-semibold rounded-full ${
+                                subscription.data.status === "active"
+                                  ? "bg-green-100 text-green-700"
+                                  : "bg-gray-100 text-gray-600"
+                              }`}
+                            >
+                              {subscription.data.status === "active" ? "Activo" : "Inactivo"}
+                            </div>
+                          </div>
+
+                          {/* Cuerpo */}
+                          <div className="grid sm:grid-cols-2 gap-4 mb-5">
+                            <div className="bg-secondary/40 rounded-xl p-3">
+                              <p className="text-xs text-text-muted mb-1">Inicio del período</p>
+                              <p className="font-medium text-text-main">
+                                {new Date(subscription.data.current_period_start).toLocaleDateString("es-MX")}
+                              </p>
+                            </div>
+
+                            <div className="bg-secondary/40 rounded-xl p-3">
+                              <p className="text-xs text-text-muted mb-1">Fin del período</p>
+                              <p className="font-medium text-text-main">
+                                {new Date(subscription.data.current_period_end).toLocaleDateString("es-MX")}
+                              </p>
+                            </div>
+
+                            <div className="bg-secondary/40 rounded-xl p-3 col-span-2">
+                              <p className="text-xs text-text-muted mb-1">ID de Suscripción</p>
+                              <p className="font-mono text-xs text-text-muted truncate">
+                                {subscription.data.stripe_subscription_id}
+                              </p>
+                            </div>
+                          </div>
+
+                          {/* Acciones */}
+                          <div className="flex justify-between items-center border-t border-line-light pt-4">
+
+                            <div className="text-sm text-text-muted">
+                              Próximo cobro automático al finalizar el período.
+                            </div>
+
+                            <div className="flex items-center gap-3">
+
+                              {/* --- BOTÓN MEJORAR PLAN (solo si NO es premium) --- */}
+                              {subscription.data.plan !== "premium" && (
                                 <button
-                                  onClick={() => alert("Función próxima: cancelar suscripción")}
-                                  className="px-4 py-2 text-sm font-medium text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition"
+                                  onClick={() => navigate('/tienda/mejorar-plan')}
+                                  className="px-4 py-2 text-sm font-medium text-primary hover:text-primary/80 hover:bg-primary/10 rounded-lg transition"
                                 >
-                                  Dar de baja
+                                  Mejorar Plan
                                 </button>
-                              </div>
-                                
-                              {/* Decoración sutil */}
-                              <div className="absolute top-0 right-0 w-24 h-24 bg-primary/10 rounded-bl-full pointer-events-none"></div>
+                              )}
+
+                              {/* --- YA EXISTENTE: Dar de baja --- */}
+                              <button
+                                onClick={() => alert("Función próxima: cancelar suscripción")}
+                                className="px-4 py-2 text-sm font-medium text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition"
+                              >
+                                Dar de baja
+                              </button>
+
                             </div>
-                          ) : (
-                            <div className="bg-secondary/20 p-6 rounded-xl text-center text-text-muted">
-                              No hay información de suscripción disponible.
-                            </div>
-                          )}
+                          </div>
+
+                          {/* Decoración */}
+                          <div className="absolute top-0 right-0 w-24 h-24 bg-primary/10 rounded-bl-full pointer-events-none"></div>
                         </div>
-                      );
+                      ) : (
+                        <div className="bg-secondary/20 p-6 rounded-xl text-center text-text-muted">
+                          No hay información de suscripción disponible.
+                        </div>
+                      )}
+                    </div>
+                  );
 
 
                 default:
@@ -556,15 +621,14 @@ const StoreSettingsPage = () => {
 
             {/* Modal unificado */}
             <ConfirmModal
-                isOpen={modalState !== 'closed'}
-                title={modalTitle}
-                message={modalMessage}
-                confirmText="Guardar"
-                cancelText="Cancelar"
-                type={modalState === 'closed' ? 'confirm' : modalState}
-                onConfirm={handleConfirmSave}
-                onCancel={handleCancelSave}
-            />
+          isOpen={modalState !== 'closed'}
+          title={modalTitle}
+          message={modalMessage}
+          confirmText="Guardar"
+          cancelText="Cancelar"
+          type={modalState === 'closed' ? 'confirm' : modalState}
+          onConfirm={handleConfirmSave}
+          onCancel={handleCancelSave} state={'confirm'}            />
         </>
     );
 };

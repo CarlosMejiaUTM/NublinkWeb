@@ -1,6 +1,8 @@
 // FileName: index.ts
 // Path: src/types/index.ts
 
+import type { RawData } from "@/services/api";
+
 /* ============================================================
    📦 TIPOS BASADOS EN RESPUESTAS REALES DE TU API
    ============================================================ */
@@ -59,8 +61,11 @@ export interface Store {
   map_url?: string | null;
   longitude?: number | string | null;
   latitude?: number | string | null;
+  longitud?: number | string | null;  // ✅ AGREGAR para compatibilidad API
+  latitud?: number | string | null;   // ✅ AGREGAR para compatibilidad API
   description?: string | null;
   category?: string | null;
+  category_id?: number | null;
   status: 'pending' | 'approved' | 'active' | 'rejected' | string;
   is_verified: boolean;
   schedule?: string;
@@ -128,6 +133,8 @@ export interface Product {
   imageUrl?: string;
   status?: 'Activo' | 'Inactivo' | 'Borrador' | string;
   barcode?: string;
+
+  category?: Category;
 }
 
 export interface Order {
@@ -193,3 +200,12 @@ export interface StoreRegistrationData {
 /* ============================================================
    🔚 FIN DEL ARCHIVO
    ============================================================ */
+export interface AIRecommendation {
+  top_products: any[];
+  low_products: any[];
+  executive_summary: string[];
+}
+export interface FullAPIResponse {
+  data: RawData;
+  ai_parsed: AIRecommendation;
+}
