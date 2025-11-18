@@ -1,7 +1,6 @@
 // FileName: StoreRejectedPage.tsx
 // Path: src/pages/store-panel/StoreRejectedPage.tsx
 
-import React from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import Card from '../../components/common/Card';
 import Button from '../../components/common/Button';

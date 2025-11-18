@@ -97,27 +97,45 @@ export const getStoreProfile = async (): Promise<User> => {
 export const updateStoreProfile = async (data: Partial<Store & User>): Promise<User> => {
   const UPDATE_ENDPOINT = `/web/stores/mine/profile-with-store`;
 
-  const cleanData: any = {
-    ...(data.name && { name: data.name }),
-    ...(data.phone && { phone: data.phone }),
-    ...(data.business_name && { business_name: data.business_name }),
-    ...(data.owner_name && { owner_name: data.owner_name }),
-    ...(data.address && { address: data.address }),
-    ...(data.description !== undefined && { description: data.description }),
-    ...(data.latitude !== undefined && { latitude: data.latitude }),
-    ...(data.longitude !== undefined && { longitude: data.longitude }),
-  };
+  // Separar datos de usuario y tienda según el formato esperado por la API
+  const payload: any = {};
+
+  // userData - solo incluir si hay cambios en campos de usuario
+  const userData: any = {};
+  if (data.name !== undefined) userData.name = data.name;
+  if (data.phone !== undefined) userData.phone = data.phone;
+  if (data.username !== undefined) userData.username = data.username;
+  
+  if (Object.keys(userData).length > 0) {
+    payload.userData = userData;
+  }
+
+  // storeData - solo incluir si hay cambios en campos de tienda
+  const storeData: any = {};
+  if (data.business_name !== undefined) storeData.business_name = data.business_name;
+  if (data.owner_name !== undefined) storeData.owner_name = data.owner_name;
+  if (data.address !== undefined) storeData.address = data.address;
+  if (data.description !== undefined) storeData.description = data.description;
+  if (data.latitude !== undefined) storeData.latitude = String(data.latitude);
+  if (data.longitude !== undefined) storeData.longitude = String(data.longitude);
+  if (data.category_id !== undefined) storeData.category_id = data.category_id;
+  if (data.map_url !== undefined) storeData.map_url = data.map_url;
+  
+  if (Object.keys(storeData).length > 0) {
+    payload.storeData = storeData;
+  }
 
   const response = await fetchWithAuth(UPDATE_ENDPOINT, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(cleanData),
+    body: JSON.stringify(payload),
   });
 
   if (!response) throw new Error('El servidor no devolvió datos');
-  return response as User;
+  
+  // La API devuelve { ok: true, data: { user con store anidado } }
+  return response.data || response;
 };
-
 /**
  * 📦 Obtener la suscripción activa de la tienda
  */
@@ -125,6 +143,7 @@ export const getStoreSubscription = async (): Promise<any> => {
   const SUBSCRIPTION_ENDPOINT = '/web/stores/mine/subscription';
   return await fetchWithAuth(SUBSCRIPTION_ENDPOINT, { method: 'GET' });
 };
+
 
 /* ============================================================
  🧠 FUNCIÓN UNIFICADA (SuperAdmin o Tienda)
@@ -161,3 +180,5 @@ export const getDashboardData = async (user: User, storeId?: string): Promise<St
     throw new Error('No se pudieron cargar las estadísticas del dashboard.');
   }
 };
+
+
