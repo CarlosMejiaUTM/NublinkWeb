@@ -1,22 +1,24 @@
 // FileName: AdminStores.tsx
 // Path: src/pages/admin-panel/AdminStores.tsx
-
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import Card from "../../components/common/Card";
 import Button from "../../components/common/Button";
 import Input from "../../components/common/Input";
 import Select from "../../components/common/Select";
-import ConfirmModal from "../../components/common/ConfirmModal"; // ✅ NUEVO
+import ConfirmModal from "../../components/common/ConfirmModal";
+import ToastsContainer from "../../components/common/Toast";
+import { useToast } from "../../hooks/useToast";
 import type { Store, Category } from "../../types";
+
 import {
   getAdminPendingStores,
   getAdminApprovedStores,
   getAdminRejectedStores,
   approveStore,
   rejectStore,
-  getCategories
-} from '../../services/api';
+  getCategories,
+} from '../../services/api/admin';
 
 import {
   CheckIcon,
@@ -25,14 +27,16 @@ import {
   MagnifyingGlassIcon
 } from '@heroicons/react/20/solid';
 
-// --- (Spinner y Error) ---
+/* ============================================================
+   🌀 COMPONENTES AUXILIARES
+   ============================================================ */
 const LoadingSpinner = () => (
   <div className="flex justify-center items-center h-48">
     <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
   </div>
 );
 
-const ErrorMessage = ({ message, onRetry }: { message: string, onRetry?: () => void }) => (
+const ErrorMessage = ({ message, onRetry }: { message: string; onRetry?: () => void }) => (
   <div className="p-4 text-center text-red-600 bg-red-100 rounded-lg border border-red-200">
     <p>{message}</p>
     {onRetry && (
@@ -43,15 +47,13 @@ const ErrorMessage = ({ message, onRetry }: { message: string, onRetry?: () => v
   </div>
 );
 
-const statusStyles: { [key: string]: string } = {
-  'active': 'bg-green-100 text-green-700',
-  'pending': 'bg-yellow-100 text-yellow-800',
-  'rejected': 'bg-red-100 text-red-700',
+const statusStyles: Record<string, string> = {
+  active: 'bg-green-100 text-green-700',
+  approved: 'bg-green-100 text-green-700',
+  pending: 'bg-yellow-100 text-yellow-800',
+  rejected: 'bg-red-100 text-red-700',
 };
 
-type StoreStatusTab = 'pending' | 'approved' | 'rejected';
-
-// --- Avatar ---
 const StoreAvatar = ({ name }: { name: string }) => {
   const initial = name ? name.charAt(0).toUpperCase() : 'T';
   return (
@@ -61,11 +63,14 @@ const StoreAvatar = ({ name }: { name: string }) => {
   );
 };
 
+/* ============================================================
+   🧠 PÁGINA PRINCIPAL
+   ============================================================ */
 const AdminStoresPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
-  const initialTab = searchParams.get('tab') || 'pending';
+  const initialTab = (searchParams.get('tab') as 'pending' | 'approved' | 'rejected') || 'pending';
+  const [activeTab, setActiveTab] = useState<'pending' | 'approved' | 'rejected'>(initialTab);
 
-  const [activeTab, setActiveTab] = useState<StoreStatusTab>(initialTab as StoreStatusTab);
   const [stores, setStores] = useState<Store[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -74,34 +79,42 @@ const AdminStoresPage = () => {
   // --- Filtros ---
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
-  const [categoryOptions, setCategoryOptions] = useState<{ value: string, label: string }[]>([]);
+  const [categoryOptions, setCategoryOptions] = useState<{ value: string; label: string }[]>([]);
 
   // --- Modal ---
   const [modalOpen, setModalOpen] = useState(false);
-  const [modalState, setModalState] = useState<'confirm' | 'success'>('confirm');
+  const [modalState, setModalState] = useState<'confirm' | 'loading' | 'success'>('confirm');
   const [modalAction, setModalAction] = useState<'approve' | 'reject' | null>(null);
   const [selectedStoreId, setSelectedStoreId] = useState<number | null>(null);
 
+  // --- Toast system ---
+  const { toasts, push } = useToast();
+
+  /* ============================================================
+     📡 Cargar tiendas
+     ============================================================ */
   const loadStores = useCallback(async () => {
     try {
       setIsLoading(true);
       setError(null);
       let data: Store[] = [];
-      if (activeTab === 'pending') {
-        data = await getAdminPendingStores();
-      } else if (activeTab === 'approved') {
-        data = await getAdminApprovedStores();
-      } else if (activeTab === 'rejected') {
-        data = await getAdminRejectedStores();
-      }
-      setStores(data);
+
+      if (activeTab === 'pending') data = await getAdminPendingStores();
+      if (activeTab === 'approved') data = await getAdminApprovedStores();
+      if (activeTab === 'rejected') data = await getAdminRejectedStores();
+
+      setStores(data || []);
     } catch (err) {
+      console.error("❌ Error al cargar tiendas:", err);
       setError(err instanceof Error ? err.message : "Error desconocido al cargar tiendas");
     } finally {
       setIsLoading(false);
     }
   }, [activeTab]);
 
+  /* ============================================================
+     🏷️ Cargar categorías
+     ============================================================ */
   useEffect(() => {
     const loadCategories = async () => {
       try {
@@ -112,33 +125,42 @@ const AdminStoresPage = () => {
         }));
         setCategoryOptions([{ value: '', label: 'Todas las Categorías' }, ...options]);
       } catch (error) {
-        console.error("Error al cargar categorías", error);
+        console.error("❌ Error al cargar categorías:", error);
       }
     };
     loadCategories();
   }, []);
 
+  // 🔁 Recargar al cambiar pestaña
   useEffect(() => {
     loadStores();
   }, [loadStores]);
 
-  const changeTab = (tab: StoreStatusTab) => {
+  /* ============================================================
+     🔀 Cambio de pestaña
+     ============================================================ */
+  const changeTab = (tab: 'pending' | 'approved' | 'rejected') => {
     setActiveTab(tab);
     setSearchParams({ tab });
   };
 
+  /* ============================================================
+     🔎 Filtros
+     ============================================================ */
   const filteredStores = useMemo(() => {
     return stores
       .filter(store =>
-        store.business_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        store.owner_name.toLowerCase().includes(searchQuery.toLowerCase())
+        (store.business_name?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
+        (store.owner_name?.toLowerCase() || '').includes(searchQuery.toLowerCase())
       )
       .filter(store =>
         categoryFilter ? store.category_id === parseInt(categoryFilter) : true
       );
   }, [stores, searchQuery, categoryFilter]);
 
-  // --- CONFIRM DIALOG LOGIC ---
+  /* ============================================================
+     ⚙️ Modal de confirmación
+     ============================================================ */
   const openConfirmModal = (action: 'approve' | 'reject', storeId: number) => {
     setSelectedStoreId(storeId);
     setModalAction(action);
@@ -149,26 +171,34 @@ const AdminStoresPage = () => {
   const handleConfirmAction = async () => {
     if (!selectedStoreId || !modalAction) return;
 
-    setModalState('confirm');
+    setModalState('loading');
     setLoadingStoreId(selectedStoreId);
 
     try {
       if (modalAction === 'approve') {
-        await approveStore(selectedStoreId);
+        await approveStore(selectedStoreId.toString());
+        push("Tienda aprobada correctamente", "success");
       } else {
-        await rejectStore(selectedStoreId);
+        await rejectStore(selectedStoreId.toString());
+        push("Tienda rechazada correctamente", "success");
       }
+
+      // 🔁 Actualizar lista
       setStores(prev => prev.filter(s => s.id !== selectedStoreId));
       setModalState('success');
       setTimeout(() => setModalOpen(false), 1500);
     } catch (err) {
       console.error(err);
-      alert(`Error al ${modalAction === 'approve' ? 'aprobar' : 'rechazar'} la tienda`);
+      push("Error al procesar la acción", "error");
+      setModalState('confirm');
     } finally {
       setLoadingStoreId(null);
     }
   };
 
+  /* ============================================================
+     🧾 Render principal
+     ============================================================ */
   const renderContent = () => {
     if (isLoading) return <LoadingSpinner />;
     if (error) return <ErrorMessage message={error} onRetry={loadStores} />;
@@ -195,7 +225,9 @@ const AdminStoresPage = () => {
               return (
                 <tr
                   key={store.id}
-                  className={`border-t border-line-light transition-colors ${isCurrentLoading ? 'opacity-50 bg-secondary' : 'hover:bg-secondary-light'}`}
+                  className={`border-t border-line-light transition-colors ${
+                    isCurrentLoading ? 'opacity-50 bg-secondary' : 'hover:bg-secondary-light'
+                  }`}
                 >
                   <td className="p-4 font-medium text-text-main">
                     <div className="flex items-center gap-3">
@@ -204,9 +236,15 @@ const AdminStoresPage = () => {
                     </div>
                   </td>
                   <td className="p-4 text-text-muted">{store.owner_name}</td>
-                  <td className="p-4 text-text-muted max-w-xs truncate" title={store.address}>{store.address}</td>
+                  <td className="p-4 text-text-muted max-w-xs truncate" title={store.address}>
+                    {store.address}
+                  </td>
                   <td className="p-4">
-                    <span className={`inline-block px-2.5 py-1 text-xs font-semibold rounded-full ${statusStyles[store.status.toLowerCase()] || 'bg-gray-100 text-gray-700'}`}>
+                    <span
+                      className={`inline-block px-2.5 py-1 text-xs font-semibold rounded-full ${
+                        statusStyles[store.status?.toLowerCase()] || 'bg-gray-100 text-gray-700'
+                      }`}
+                    >
                       {store.status}
                     </span>
                   </td>
@@ -249,7 +287,10 @@ const AdminStoresPage = () => {
     );
   };
 
-  const getTabClass = (tabName: StoreStatusTab) =>
+  /* ============================================================
+     🎛️ Tabs + Layout
+     ============================================================ */
+  const getTabClass = (tabName: 'pending' | 'approved' | 'rejected') =>
     `px-4 py-2 font-medium text-sm rounded-md transition-colors ${
       activeTab === tabName
         ? 'bg-primary text-white shadow-sm'
@@ -305,19 +346,6 @@ const AdminStoresPage = () => {
 
       <Card className="overflow-hidden p-0">
         {renderContent()}
-        {!isLoading && filteredStores.length > 0 && (
-          <div className="p-4 border-t border-line-light flex justify-between items-center text-xs text-text-muted">
-            <span>Página 1 de 1</span>
-            <div className="flex gap-1">
-              <Button variant="secondary" size="sm" className="px-2" disabled>
-                &lt; Anterior
-              </Button>
-              <Button variant="secondary" size="sm" className="px-2">
-                Siguiente &gt;
-              </Button>
-            </div>
-          </div>
-        )}
       </Card>
 
       {/* --- MODAL --- */}
@@ -343,6 +371,9 @@ const AdminStoresPage = () => {
         onCancel={() => setModalOpen(false)}
         state={modalState}
       />
+
+      {/* --- TOASTS --- */}
+      <ToastsContainer toasts={toasts} />
     </>
   );
 };

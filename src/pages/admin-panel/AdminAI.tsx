@@ -1,5 +1,5 @@
 // FileName: AdminAI.tsx
-// Path: src/pages/admin-panel/AdminAIPage.tsx
+// Path: src/pages/admin-panel/AdminAI.tsx
 
 import React from 'react';
 import Card from "../../components/common/Card";

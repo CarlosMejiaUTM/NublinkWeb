@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import Card from "../../components/common/Card";
+
 import {
   ArrowTrendingUpIcon,
   ArrowTrendingDownIcon,

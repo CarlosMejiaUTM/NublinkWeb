@@ -1,65 +1,89 @@
-prisma/
-├── public/                 # (Archivos estáticos, accesibles desde /)
-│   └── icons/              # (Iconos de la PWA)
-│       ├── icon-192x192.png
-│       └── icon-512x512.png
-│
-├── src/                    # (Código fuente de React)
-│   ├── assets/             # (Imágenes, logos)
-│   │   └── nublink-logo.png  # (Tu logo)
-│   │
-│   ├── components/         # (Componentes Reutilizables)
-│   │   └── common/         # (Tu Kit de UI "Premium")
-│   │       ├── Button.tsx
-│   │       ├── Card.tsx
-│   │       ├── Input.tsx
-│   │       ├── LocationPickerMap.tsx  # (El mapa de Leaflet)
-│   │       ├── PaymentForm.tsx        # (El formulario de Stripe)
-│   │       ├── ProtectedRoute.tsx     # (El guardián de rutas)
-│   │       └── Select.tsx
-│   │
-│   ├── layouts/            # (Plantillas de página principales)
-│   │   ├── AdminDashboardLayout.tsx # (Layout para el Super Admin)
-│   │   ├── AuthLayout.tsx           # (Layout para Login/Registro)
-│   │   └── DashboardLayout.tsx      # (Layout para el Panel de Tienda)
-│   │
-│   ├── pages/              # (Las vistas/pantallas de la app)
-│   │   ├── Landing.tsx     # (Tu landing page rediseñada)
-│   │   │
-│   │   ├── auth/           # (Flujo de autenticación)
-│   │   │   ├── Login.tsx           # (Conectado a la API real)
-│   │   │   └── StoreRegistration.tsx # (Wizard real con Stripe)
-│   │   │
-│   │   ├── store-panel/    # (Panel de la Tienda)
-│   │   │   ├── StoreDashboard.tsx       # (Conectado a API real: /mine/stats)
-│   │   │   ├── StoreProducts.tsx        # (Conectado a API real: /mine/products)
-│   │   │   ├── StorePromotions.tsx      # (Placeholder / Simulado)
-│   │   │   ├── StoreRecommendations.tsx # (Placeholder / Simulado)
-│   │   │   ├── StoreReports.tsx         # (Placeholder / Simulado)
-│   │   │   └── StoreSettings.tsx        # (Conectado a API real: /mine/profile)
-│   │   │
-│   │   └── admin-panel/    # (Panel del Super Admin)
-│   │       ├── AdminAI.tsx             # (Placeholder / Simulado)
-│   │       ├── AdminDashboard.tsx      # (Conectado a API real: /admin/stats)
-│   │       ├── AdminGlobalProducts.tsx # (Conectado a API real: /products)
-│   │       ├── AdminPayments.tsx       # (Placeholder / Simulado)
-│   │       ├── AdminStoreDetailPage.tsx # (¡NUEVO! Página de detalle de tienda)
-│   │       ├── AdminStores.tsx         # (Conectado a API real: /admin/pending, etc.)
-│   │       ├── AdminSupport.tsx        # (Placeholder / Simulado)
-│   │       └── AdminUsers.tsx          # (Conectado a API real: /users)
-│   │
-│   ├── services/           # (Lógica de API)
-│   │   └── api.ts          # (Contiene TODAS las llamadas reales y simuladas)
-│   │
-│   ├── types/              # (Definiciones TypeScript)A
-│   │   └── index.ts        # (Coincide con tu API real)
-│   │
-│   ├── App.tsx             # (El Router principal, con layouts separados)
-│   └── main.tsx            # (El punto de entrada, carga React y Stripe)
-│
-├── .env                    # (¡Importante! Tus claves VITE_API_BASE_URL y VITE_STRIPE_PUBLISHABLE_KEY)
-├── index.html              # (El HTML principal, carga el CDN de Tailwind y Leaflet)
-├── package.json            # (Dependencias del proyecto, ej: @heroicons/react)
-├── tailwind.config.js      # (Archivo de config de Tailwind, usado por el CDN)
-├── tsconfig.json           # (Configuración de TypeScript)
-└── vite.config.ts          # (Configuración de Vite y PWA)
+  ```
+  prisma
+  ├─ .env
+  ├─ eslint.config.js
+  ├─ estructura
+  ├─ index.html
+  ├─ package-lock.json
+  ├─ package.json
+  ├─ public
+  │  ├─ icons
+  │  │  ├─ icon-192x192.png
+  │  │  └─ icon-512x512.png
+  │  └─ vite.svg
+  ├─ README.md
+  ├─ src
+  │  ├─ App.css
+  │  ├─ App.tsx
+  │  ├─ assets
+  │  │  ├─ hero-boutique.jpg
+  │  │  ├─ nublink-logo.png
+  │  │  └─ react.svg
+  │  ├─ common
+  │  │  └─ Button
+  │  ├─ components
+  │  │  ├─ common
+  │  │  │  ├─ Button.tsx
+  │  │  │  ├─ Card.tsx
+  │  │  │  ├─ ConfirmModal.tsx
+  │  │  │  ├─ Input.tsx
+  │  │  │  ├─ LocationPickerMap.tsx
+  │  │  │  ├─ PaymentForm.tsx
+  │  │  │  ├─ ProtectedRoute.tsx
+  │  │  │  └─ Select.tsx
+  │  │  └─ ui
+  │  ├─ hooks
+  │  │  └─ useAuth.ts
+  │  ├─ index.css
+  │  ├─ layouts
+  │  │  ├─ AdminDashboardLayout.tsx
+  │  │  ├─ AuthLayout.tsx
+  │  │  ├─ DashboardLayout.tsx
+  │  │  ├─ Footer.tsx
+  │  │  └─ Header.tsx
+  │  ├─ main.tsx
+  │  ├─ pages
+  │  │  ├─ admin-panel
+  │  │  │  ├─ AdminAI.tsx
+  │  │  │  ├─ AdminDashboard.tsx
+  │  │  │  ├─ AdminGlobalProducts.tsx
+  │  │  │  ├─ AdminPayments.tsx
+  │  │  │  ├─ AdminStoreDetail.tsx
+  │  │  │  ├─ AdminStores.tsx
+  │  │  │  ├─ AdminSupport.tsx
+  │  │  │  └─ AdminUsers.tsx
+  │  │  ├─ auth
+  │  │  │  ├─ Login.tsx
+  │  │  │  └─ StoreRegistration.tsx
+  │  │  ├─ Landing.tsx
+  │  │  └─ store-panel
+  │  │     ├─ PendingStore.tsx
+  │  │     ├─ RejectedStore.tsx
+  │  │     ├─ StoreDashboard.tsx
+  │  │     ├─ StoreOrders.tsx
+  │  │     ├─ StoreProducts.tsx
+  │  │     ├─ StorePromotions.tsx
+  │  │     ├─ StoreRecommendations.tsx
+  │  │     ├─ StoreRejectedPage.tsx
+  │  │     ├─ StoreReports.tsx
+  │  │     └─ StoreSettings.tsx
+  │  ├─ services
+  │  │  ├─ api
+  │  │  │  ├─ admin.ts
+  │  │  │  ├─ ai.ts
+  │  │  │  ├─ auth.ts
+  │  │  │  ├─ categories.ts
+  │  │  │  ├─ helpers.ts
+  │  │  │  ├─ index.ts
+  │  │  │  ├─ payments.ts
+  │  │  │  └─ store.ts
+  │  │  └─ api.txt
+  │  └─ types
+  │     └─ index.ts
+  ├─ tailwind.config.js
+  ├─ tsconfig.app.json
+  ├─ tsconfig.json
+  ├─ tsconfig.node.json
+  └─ vite.config.ts
+
+  ```   

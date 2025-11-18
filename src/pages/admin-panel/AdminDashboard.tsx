@@ -1,217 +1,190 @@
-// FileName: AdminDashboard.tsx
-// Path: src/pages/admin-panel/AdminDashboard.tsx
+// File: src/pages/admin-panel/AdminDashboard.tsx
 
-import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import type { AdminDashboardSummary, Store, User } from "../../types"; // Importa Store y User
+import React, { useEffect, useState } from "react";
+import { motion } from "framer-motion"; // ✅ Import necesario para animaciones suaves
+import {
+  getAdminDashboardData,
+  getAdminApprovedStores,
+  getAdminRecentActivity,
+} from "../../services/api/admin";
+import type { AdminDashboardSummary, Store } from "../../types";
+
 import Card from "../../components/common/Card";
-import Button from "../../components/common/Button"; // Importa Button
-import { getAdminDashboardData, getAdminPendingStores, getAdminUsers } from '../../services/api'; // Importa todas las APIs
+import { FilterBar } from "../../components/admin-dashboard/FilterBar";
+import { MapSection } from "../../components/admin-dashboard/MapSection";
+import { TopStores } from "../../components/admin-dashboard/TopStores";
+import { StatsCharts } from "../../components/admin-dashboard/StatsCharts";
+import { RecentActivity } from "../../components/admin-dashboard/RecentActivity";
 
-// --- ¡NUEVOS Iconos Profesionales (Outline) ---
 import {
   UsersIcon,
   BuildingStorefrontIcon,
   ClockIcon,
   CreditCardIcon,
-  ChartBarIcon,
-  UserGroupIcon,
-  ExclamationTriangleIcon
-} from '@heroicons/react/24/outline'; // Usamos outline para un look más limpio
+  ArrowPathIcon,
+  ExclamationTriangleIcon,
+} from "@heroicons/react/24/outline";
 
-// --- Componente de Carga (Spinner) ---
 const LoadingSpinner = () => (
-    <div className="flex justify-center items-center h-96"> {/* Más alto */}
-        <div className="animate-spin rounded-full h-20 w-20 border-t-4 border-b-4 border-primary"></div>
-    </div>
+  <div className="flex justify-center items-center h-96">
+    <div className="animate-spin rounded-full h-20 w-20 border-t-4 border-b-4 border-primary"></div>
+  </div>
 );
 
-// --- Componente de Error ---
 const ErrorMessage = ({ message }: { message: string }) => (
-    <Card className="bg-red-50 border-red-200">
-        <div className="flex items-center gap-3">
-            <ExclamationTriangleIcon className="w-8 h-8 text-red-500 flex-shrink-0" />
-            <div>
-                <p className="font-semibold text-red-700">Error al Cargar Datos</p>
-                <p className="text-sm text-red-600 mt-1">{message}</p>
-            </div>
-        </div>
-    </Card>
+  <Card className="bg-red-50 border-red-200">
+    <div className="flex items-center gap-3">
+      <ExclamationTriangleIcon className="w-8 h-8 text-red-500" />
+      <div>
+        <p className="font-semibold text-red-700">Error al cargar datos</p>
+        <p className="text-sm text-red-600 mt-1">{message}</p>
+      </div>
+    </div>
+  </Card>
 );
 
-// --- ¡NUEVO! Tarjeta de Estadísticas Rediseñada ---
-const StatCard = ({ title, value, to, icon: Icon }: { title: string, value: string | number, to: string, icon: React.ElementType }) => (
-  <Link to={to} className="block transition-all duration-300 ease-in-out hover:-translate-y-1 hover:shadow-lg">
-    <Card className="shadow-md">
+const StatCard = ({
+  title,
+  value,
+  icon: Icon,
+}: {
+  title: string;
+  value: string | number;
+  icon: React.ElementType;
+}) => (
+  <motion.div
+    whileHover={{ scale: 1.03 }}
+    whileTap={{ scale: 0.98 }}
+    initial={{ opacity: 0, y: 20 }}
+    animate={{ opacity: 1, y: 0 }}
+    transition={{ duration: 0.3 }}
+  >
+    <Card className="shadow-md hover:-translate-y-1 hover:shadow-lg transition-all duration-200">
       <div className="flex items-center gap-4">
         <div className="p-3 bg-primary-light rounded-full">
           <Icon className="w-6 h-6 text-primary" />
         </div>
         <div>
-          <p className="text-sm font-medium text-text-muted mb-0">{title}</p>
+          <p className="text-sm font-medium text-text-muted">{title}</p>
           <p className="text-3xl font-bold text-text-main">{value}</p>
         </div>
       </div>
     </Card>
-  </Link>
+  </motion.div>
 );
 
-// --- ¡NUEVO! Placeholder de Gráfico de Barras ---
-const BarChartPlaceholder = () => (
-    <div className="h-64 bg-secondary rounded-lg border border-line-light flex items-end justify-around p-4 gap-2">
-        <div className="w-1/12 bg-primary-light hover:bg-primary/50 rounded-t-md" style={{ height: '40%' }}></div>
-        <div className="w-1/12 bg-primary-light hover:bg-primary/50 rounded-t-md" style={{ height: '60%' }}></div>
-        <div className="w-1/12 bg-primary-light hover:bg-primary/50 rounded-t-md" style={{ height: '80%' }}></div>
-        <div className="w-1/12 bg-primary-light hover:bg-primary/50 rounded-t-md" style={{ height: '50%' }}></div>
-        <div className="w-1/12 bg-primary-light hover:bg-primary/50 rounded-t-md" style={{ height: '70%' }}></div>
-        <div className="w-1/12 bg-primary-light hover:bg-primary/50 rounded-t-md" style={{ height: '90%' }}></div>
-        <div className="w-1/12 bg-primary-light hover:bg-primary/50 rounded-t-md" style={{ height: '65%' }}></div>
-    </div>
-);
+const AdminDashboardPage: React.FC = () => {
+  const [stats, setStats] = useState<AdminDashboardSummary | null>(null);
+  const [stores, setStores] = useState<Store[]>([]);
+  const [activities, setActivities] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [activityLoading, setActivityLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [filters, setFilters] = useState({ zone: "all", startDate: "", endDate: "" });
 
-// --- ¡NUEVO! Placeholder de Gráfico de Dona ---
-const DonutChartPlaceholder = () => (
-    <div className="h-40 w-40 mx-auto bg-secondary rounded-full flex items-center justify-center border-8 border-primary-light">
-        <div className="w-24 h-24 bg-surface rounded-full flex flex-col items-center justify-center">
-            <UserGroupIcon className="w-8 h-8 text-primary" />
-        </div>
-    </div>
-);
+  // 🔄 Cargar toda la data del dashboard
+  const fetchDashboard = async () => {
+    try {
+      setLoading(true);
+      const [statsRes, storesRes, activityRes] = await Promise.all([
+        getAdminDashboardData(),
+        getAdminApprovedStores(),
+        getAdminRecentActivity(),
+      ]);
 
+      setStats(statsRes);
+      setStores(storesRes);
+      setActivities(activityRes);
 
-const AdminDashboardPage = () => {
-    // --- Estados para TODOS los datos de la página ---
-    const [statsData, setStatsData] = useState<AdminDashboardSummary | null>(null);
-    const [pendingStores, setPendingStores] = useState<Store[]>([]);
-    const [users, setUsers] = useState<User[]>([]);
-    
-    const [isPageLoading, setIsPageLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
+      console.log("🟢 Dashboard cargado:", { statsRes, storesRes, activityRes });
+    } catch (err) {
+      console.error("❌ Error cargando dashboard:", err);
+      setError("No se pudieron cargar los datos del dashboard.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    // --- Carga de datos unificada ---
-    useEffect(() => {
-        const loadAllDashboardData = async () => {
-            try {
-                setIsPageLoading(true);
-                setError(null);
+  // 🔁 Recargar solo actividad reciente
+  const reloadActivity = async () => {
+    try {
+      setActivityLoading(true);
+      const activityRes = await getAdminRecentActivity();
+      setActivities(activityRes);
+      console.log("🟢 Actividad actualizada:", activityRes);
+    } catch (err) {
+      console.error("❌ Error recargando actividad:", err);
+    } finally {
+      setActivityLoading(false);
+    }
+  };
 
-                // Llama a todas las APIs en paralelo
-                const [statsResult, pendingStoresResult, usersResult] = await Promise.allSettled([
-                    getAdminDashboardData(),
-                    getAdminPendingStores(),
-                    getAdminUsers()
-                ]);
+  useEffect(() => {
+    fetchDashboard();
+  }, []);
 
-                // Maneja los resultados
-                if (statsResult.status === 'fulfilled') {
-                    setStatsData(statsResult.value);
-                } else {
-                    console.error("Error en stats:", statsResult.reason);
-                    throw new Error("No se pudieron cargar las estadísticas principales.");
-                }
+  if (loading) return <LoadingSpinner />;
+  if (error) return <ErrorMessage message={error} />;
+  if (!stats) return <p>No hay datos disponibles.</p>;
 
-                if (pendingStoresResult.status === 'fulfilled') {
-                    setPendingStores(pendingStoresResult.value);
-                } else {
-                    console.error("Error en tiendas pendientes:", pendingStoresResult.reason);
-                    // No es un error fatal, la página puede seguir
-                }
-                
-                if (usersResult.status === 'fulfilled') {
-                    setUsers(usersResult.value);
-                } else {
-                    console.error("Error en usuarios:", usersResult.reason);
-                    // No es un error fatal
-                }
+  const filteredStores =
+    filters.zone === "all"
+      ? stores
+      : stores.filter((s) => s.address?.toLowerCase().includes(filters.zone.toLowerCase()));
 
-            } catch (err) {
-                setError(err instanceof Error ? err.message : "Un error inesperado ocurrió.");
-            } finally {
-                setIsPageLoading(false);
-            }
-        };
-        
-        loadAllDashboardData();
-    }, []);
+  return (
+    <motion.div
+      className="space-y-8"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.5 }}
+    >
+      {/* 📊 Tarjetas de métricas principales */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <StatCard title="Usuarios Totales" value={stats.usuarios.total} icon={UsersIcon} />
+        <StatCard title="Tiendas Activas" value={stats.tiendas.activas} icon={BuildingStorefrontIcon} />
+        <StatCard title="Tiendas Pendientes" value={stats.tiendas.pendientes} icon={ClockIcon} />
+        <StatCard
+          title="Suscripciones Activas"
+          value={stats.stripe.suscripciones_activas}
+          icon={CreditCardIcon}
+        />
+      </div>
 
-    // --- Lógica de Renderizado ---
-    const renderContent = () => {
-        if (isPageLoading) {
-            return <LoadingSpinner />;
-        }
-        if (error) {
-            return <ErrorMessage message={error} />;
-        }
-        if (statsData && statsData.usuarios) { 
-            return (
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    
-                    {/* --- Columna Principal (Izquierda/Centro) --- */}
-                    <div className="lg:col-span-2 space-y-6">
-                        {/* Tarjetas de Estadísticas Reales */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                            <StatCard title="Usuarios Totales" value={statsData.usuarios.total.toLocaleString('es-MX')} to="/admin/usuarios" icon={UsersIcon} />
-                            <StatCard title="Tiendas Activas" value={statsData.tiendas.activas.toLocaleString('es-MX')} to="/admin/tiendas?tab=approved" icon={BuildingStorefrontIcon} />
-                            <StatCard title="Tiendas Pendientes" value={statsData.tiendas.pendientes.toLocaleString('es-MX')} to="/admin/tiendas?tab=pending" icon={ClockIcon} />
-                            <StatCard title="Suscripciones Activas" value={statsData.stripe.suscripciones_activas.toLocaleString('es-MX')} to="/admin/pagos" icon={CreditCardIcon} />
-                        </div>
-                        
-                        <Card title="Actividad de la Plataforma (Simulado)">
-                           <BarChartPlaceholder />
-                        </Card>
-                    </div>
+      {/* 📈 Gráficas de métricas */}
+      <StatsCharts stats={stats} />
 
-                    {/* --- Columna Lateral (Derecha) --- */}
-                    <div className="lg:col-span-1 space-y-6">
-                        <Card title="Tiendas Pendientes por Aprobar">
-                            <div className="space-y-3">
-                                {pendingStores.length > 0 ? (
-                                    pendingStores.slice(0, 5).map(store => ( // Muestra solo las primeras 5
-                                        <div key={store.id} className="flex items-center justify-between p-2 rounded-lg hover:bg-secondary">
-                                            <div>
-                                                <p className="font-semibold text-sm text-text-main">{store.business_name}</p>
-                                                <p className="text-xs text-text-muted">{store.owner_name}</p>
-                                            </div>
-                                            <Link to={`/admin/tienda/${store.id}`}>
-                                                <Button variant="secondary" size="sm">Ver</Button>
-                                            </Link>
-                                        </div>
-                                    ))
-                                ) : (
-                                    <p className="text-sm text-text-muted text-center py-4">¡No hay tiendas pendientes!</p>
-                                )}
-                            </div>
-                            <Link to="/admin/tiendas?tab=pending">
-                                <Button variant="ghost" size="sm" className="w-full mt-4">Ver todas las tiendas pendientes</Button>
-                            </Link>
-                        </Card>
+      {/* 🔍 Filtros de visualización */}
+      <FilterBar filters={filters} setFilters={setFilters} />
 
-                        <Card title="Distribución de Roles">
-                            <DonutChartPlaceholder />
-                            <div className="mt-4 space-y-2 text-sm">
-                                <div className="flex justify-between"><span className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-primary"></div>Admin</span> <span className="font-semibold">{users.filter(u => u.role === 'superadmin').length}</span></div>
-                                <div className="flex justify-between"><span className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-blue-400"></div>Tiendas</span> <span className="font-semibold">{users.filter(u => u.role === 'store').length}</span></div>
-                                <div className="flex justify-between"><span className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-secondary"></div>Clientes</span> <span className="font-semibold">{users.filter(u => u.role === 'client').length}</span></div>
-                            </div>
-                        </Card>
-                    </div>
+      {/* 🗺️ Sección mapa + ranking */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <MapSection stores={filteredStores} />
+        <TopStores stores={filteredStores} />
+      </div>
 
-                </div>
-            );
-        }
-        
-        // Mensaje si la API devuelve algo inesperado
-        if (statsData && !statsData.usuarios) {
-             return <ErrorMessage message="La API devolvió datos en un formato inesperado." />;
-        }
-        
-        return <p>No hay datos disponibles.</p>;
-    };
+      {/* 🧾 Actividad reciente */}
+      <div className="flex justify-between items-center">
+        <h2 className="text-xl font-semibold text-text-main">Actividad Reciente</h2>
+        <button
+          onClick={reloadActivity}
+          disabled={activityLoading}
+          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
+            activityLoading
+              ? "bg-gray-200 text-gray-500 cursor-not-allowed"
+              : "bg-primary text-white hover:bg-primary-dark"
+          }`}
+        >
+          <ArrowPathIcon
+            className={`w-5 h-5 ${activityLoading ? "animate-spin" : ""}`}
+          />
+          {activityLoading ? "Actualizando..." : "Actualizar"}
+        </button>
+      </div>
 
-    return (
-        <>
-            {renderContent()}
-        </>
-    );
+      <RecentActivity activities={activities} />
+    </motion.div>
+  );
 };
+
 export default AdminDashboardPage;

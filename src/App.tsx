@@ -3,6 +3,8 @@
 
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import ProtectedRoute from './components/common/ProtectedRoute';
+import './styles/theme.css';
+
 
 // Layouts
 import DashboardLayout from './layouts/DashboardLayout';
