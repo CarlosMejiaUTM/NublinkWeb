@@ -1,4 +1,4 @@
-// ...existing code...
+// File: src/pages/Landing.tsx
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import Button from '../components/common/Button';
@@ -16,7 +16,6 @@ import {
   ArrowUpRightIcon,
   BoltIcon,
 } from '@heroicons/react/20/solid';
-
 
 // -------------------------------------------------------------
 // 🔹 HEADER
@@ -104,7 +103,6 @@ const Header = () => {
   );
 };
 
-
 // -------------------------------------------------------------
 // 🔹 HERO SECTION
 // -------------------------------------------------------------
@@ -160,7 +158,6 @@ const HeroSection = () => (
   </section>
 );
 
-
 // -------------------------------------------------------------
 // 🔹 FEATURES
 // -------------------------------------------------------------
@@ -175,7 +172,6 @@ const FeatureCard = ({ title, description, icon }: { title: string; description:
     <p className="text-gray-600">{description}</p>
   </div>
 );
-
 
 // -------------------------------------------------------------
 // 🔹 PASOS (CÓMO FUNCIONA)
@@ -192,7 +188,6 @@ const HowItWorksStep = ({ step, title, description, icon }: { step: number; titl
     </div>
   </div>
 );
-
 
 // -------------------------------------------------------------
 // 🔹 PLANES / PRECIOS
@@ -247,7 +242,6 @@ const PricingCard = ({
   </div>
 );
 
-
 // -------------------------------------------------------------
 // 🔹 CTA FINAL
 // -------------------------------------------------------------
@@ -272,7 +266,6 @@ const CTASection = () => (
   </section>
 );
 
-
 // -------------------------------------------------------------
 // 🔹 FOOTER
 // -------------------------------------------------------------
@@ -288,7 +281,6 @@ const Footer = () => (
     </div>
   </footer>
 );
-
 
 // -------------------------------------------------------------
 // 🔹 PÁGINA PRINCIPAL
@@ -391,4 +383,3 @@ const LandingPage = () => {
 };
 
 export default LandingPage;
-// ...existing code...

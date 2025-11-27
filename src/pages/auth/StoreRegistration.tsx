@@ -10,8 +10,9 @@ import AuthLayout from '../../layouts/AuthLayout';
 import Card from '../../components/common/Card';
 import LocationPickerMap from '../../components/common/LocationPickerMap';
 import PaymentForm from '../../components/common/PaymentForm';
-import { registerStore, getCategories } from '../../services/api';
 import type { StoreRegistrationData, Category } from '../../types';
+import { registerStore } from '../../services/api';
+import { getCategories } from '../../services/api/categories';
 
 // Iconos
 import {

@@ -161,3 +161,118 @@
   └─ vite.config.ts
 
   ```
+```
+prisma
+├─ .env
+├─ eslint.config.js
+├─ estructura
+├─ index.html
+├─ package-lock.json
+├─ package.json
+├─ public
+│  ├─ icons
+│  │  ├─ icon-192x192.png
+│  │  └─ icon-512x512.png
+│  └─ vite.svg
+├─ README.md
+├─ src
+│  ├─ App.css
+│  ├─ App.tsx
+│  ├─ assets
+│  │  ├─ hero-boutique.jpg
+│  │  ├─ nublink-logo.png
+│  │  └─ react.svg
+│  ├─ common
+│  │  └─ Button
+│  ├─ components
+│  │  ├─ admin-dashboard
+│  │  │  ├─ AdminHeader.tsx
+│  │  │  ├─ FilterBar.tsx
+│  │  │  ├─ index.ts
+│  │  │  ├─ MapSection.tsx
+│  │  │  ├─ RecentActivity.tsx
+│  │  │  ├─ StatsCharts.tsx
+│  │  │  ├─ TopStores.tsx
+│  │  │  └─ UserFormModal.tsx
+│  │  ├─ common
+│  │  │  ├─ AddressAutocomplete.tsx
+│  │  │  ├─ Button.tsx
+│  │  │  ├─ Card.tsx
+│  │  │  ├─ ConfirmDialog.tsx
+│  │  │  ├─ ConfirmModal.tsx
+│  │  │  ├─ Input.tsx
+│  │  │  ├─ LocationPickerMap.tsx
+│  │  │  ├─ Modal.tsx
+│  │  │  ├─ PaymentForm.tsx
+│  │  │  ├─ ProtectedRoute.tsx
+│  │  │  ├─ Select.tsx
+│  │  │  ├─ Skeleton.tsx
+│  │  │  └─ Toast.tsx
+│  │  └─ ui
+│  ├─ hooks
+│  │  ├─ useAuth.ts
+│  │  └─ useToast.ts
+│  ├─ index.css
+│  ├─ layouts
+│  │  ├─ AdminDashboardLayout.tsx
+│  │  ├─ AuthLayout.tsx
+│  │  ├─ DashboardLayout.tsx
+│  │  ├─ Footer.tsx
+│  │  ├─ Header.tsx
+│  │  ├─ ProtectedPromotionRoute.tsx
+│  │  ├─ ProtectedRecommendationsRoute.tsx
+│  │  ├─ ProtectedReportRoute.tsx
+│  │  └─ UpgradePlanPage.tsx
+│  ├─ main.tsx
+│  ├─ pages
+│  │  ├─ admin-panel
+│  │  │  ├─ AdminAI.tsx
+│  │  │  ├─ AdminDashboard.tsx
+│  │  │  ├─ AdminGlobalProducts.tsx
+│  │  │  ├─ AdminPayments.tsx
+│  │  │  ├─ AdminStoreDetail.tsx
+│  │  │  ├─ AdminStores.tsx
+│  │  │  ├─ AdminSupport.tsx
+│  │  │  └─ AdminUsers.tsx
+│  │  ├─ auth
+│  │  │  ├─ Login.tsx
+│  │  │  └─ StoreRegistration.tsx
+│  │  ├─ Landing.tsx
+│  │  └─ store-panel
+│  │     ├─ PendingStore.tsx
+│  │     ├─ products
+│  │     │  ├─ AddProductForm.tsx
+│  │     │  ├─ ProductTable.tsx
+│  │     │  └─ StoreProducts.tsx
+│  │     ├─ RejectedStore.tsx
+│  │     ├─ StoreDashboard.tsx
+│  │     ├─ StoreOrders.tsx
+│  │     ├─ StorePromotions.tsx
+│  │     ├─ StoreRecommendations.tsx
+│  │     ├─ StoreRejectedPage.tsx
+│  │     ├─ StoreReports.tsx
+│  │     └─ StoreSettings.tsx
+│  ├─ services
+│  │  └─ api
+│  │     ├─ admin.ts
+│  │     ├─ ai.ts
+│  │     ├─ auth.ts
+│  │     ├─ categories.ts
+│  │     ├─ helpers.ts
+│  │     ├─ index.ts
+│  │     ├─ payments.ts
+│  │     ├─ products.ts
+│  │     ├─ store.ts
+│  │     └─ subscription.ts
+│  ├─ styles
+│  │  └─ theme.css
+│  └─ types
+│     └─ index.ts
+├─ tailwind.config.js
+├─ tsconfig.app.json
+├─ tsconfig.json
+├─ tsconfig.node.json
+├─ vite.config.ts
+└─ 
+
+```

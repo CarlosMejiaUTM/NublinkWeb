@@ -6,27 +6,46 @@ import { Navigate, useLocation } from "react-router-dom";
 import type { User } from "../../types";
 import { getStoreProfile } from "../../services/api/store";
 
-/* ============================================================
-   🔄 Spinner de carga
-   ============================================================ */
 const AuthSpinner = () => (
   <div className="flex justify-center items-center h-screen bg-background-main">
     <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-primary"></div>
   </div>
 );
 
+/* ============================================================
+   🔓 RUTAS PÚBLICAS (solo estas pasan SIN TOKEN)
+   ============================================================ */
+const PUBLIC_ROUTES = [
+  "/",               // Landing
+  "/login",          // Login
+  "/registro-tienda" // Registro de tienda
+];
+
+// Rutas públicas SIN startsWith (esto es lo que estaba mal)
+const isPublicRoute = (pathname: string) => {
+  return PUBLIC_ROUTES.includes(pathname);
+};
+
 interface ProtectedRouteProps {
   children: React.ReactNode;
   allowedRoles: (User["role"])[];
 }
 
-/* ============================================================
-   🧩 ProtectedRoute: control de acceso y redirecciones
-   ============================================================ */
 const ProtectedRoute = ({ children, allowedRoles }: ProtectedRouteProps) => {
   const location = useLocation();
+  const pathname = location.pathname;
   const token = localStorage.getItem("authToken");
 
+  /* ============================================================
+     🟢 1) Si la ruta es pública → DEJA PASAR
+     ============================================================ */
+  if (isPublicRoute(pathname)) {
+    return <>{children}</>;
+  }
+
+  /* ============================================================
+     🟡 2) RUTAS PROTEGIDAS
+     ============================================================ */
   const [isLoading, setIsLoading] = useState(true);
   const [user, setUser] = useState<User | null>(null);
   const [authError, setAuthError] = useState(false);
@@ -40,21 +59,11 @@ const ProtectedRoute = ({ children, allowedRoles }: ProtectedRouteProps) => {
     const validateUser = async () => {
       try {
         const userData = await getStoreProfile();
-
-        console.log("🧩 Usuario obtenido en ProtectedRoute:", userData);
-
-        // Normalizamos el rol (no forzamos "store" para superadmin)
         const normalizedRole =
           userData.role || userData.rol || userData.userType || "store";
 
-        const fixedUser: User = {
-          ...userData,
-          role: normalizedRole,
-        };
-
-        setUser(fixedUser);
+        setUser({ ...userData, role: normalizedRole });
       } catch (error) {
-        console.error("❌ Error validando usuario en ProtectedRoute:", error);
         localStorage.clear();
         setAuthError(true);
       } finally {
@@ -65,78 +74,40 @@ const ProtectedRoute = ({ children, allowedRoles }: ProtectedRouteProps) => {
     validateUser();
   }, [token]);
 
-  /* ============================================================
-     🕐 Cargando
-     ============================================================ */
   if (isLoading) return <AuthSpinner />;
 
   /* ============================================================
-     🚫 No autenticado o error
+     🔴 3) Sin token → login (sin sessionExpired)
      ============================================================ */
   if (!token || authError || !user) {
-    return <Navigate to="/login" state={{ from: location }} replace />;
+    return <Navigate to="/login" replace />;
   }
 
   const userRole = user.role || "store";
 
   /* ============================================================
-     🔐 Validar rol permitido
+     🔐 4) Validar roles
      ============================================================ */
   if (!allowedRoles.includes(userRole)) {
-    console.warn("⚠️ Rol no permitido:", userRole);
-
-    // Superadmin siempre a su dashboard
-    if (userRole === "superadmin") {
-      return <Navigate to="/admin/dashboard" replace />;
-    }
-
-    // Store siempre a su dashboard (por defecto)
-    if (userRole === "store") {
-      return <Navigate to="/tienda/dashboard" replace />;
-    }
-
-    // Otros roles no reconocidos → login
-    return <Navigate to="/login" replace />;
+    if (userRole === "superadmin") return <Navigate to="/admin/dashboard" replace />;
+    return <Navigate to="/tienda/dashboard" replace />;
   }
 
   /* ============================================================
-     🧠 Lógica especial SOLO para rol 'store'
+     🏪 5) Lógica para TIENDAS
      ============================================================ */
   if (userRole === "store") {
     const tienda = user.store;
 
-    if (!tienda) {
-      console.warn("⚠️ El usuario STORE no tiene objeto tienda asociado.");
-      if (location.pathname === "/registro-tienda") return <>{children}</>;
-      return <Navigate to="/registro-tienda" replace />;
-    }
+    if (!tienda) return <Navigate to="/registro-tienda" replace />;
 
-    const status = tienda.status || "pending";
-    const isPendingPage = location.pathname === "/tienda/pendiente";
-    const isRejectedPage = location.pathname === "/tienda/rechazada";
-
-    console.log("🏪 Estado de la tienda:", status);
-
-    if (status === "pending") {
-      if (isPendingPage) return <>{children}</>;
+    if (tienda.status === "pending" && pathname !== "/tienda/pendiente")
       return <Navigate to="/tienda/pendiente" replace />;
-    }
 
-    if (status === "rejected") {
-      if (isRejectedPage) return <>{children}</>;
+    if (tienda.status === "rejected" && pathname !== "/tienda/rechazada")
       return <Navigate to="/tienda/rechazada" replace />;
-    }
-
-    if (status === "approved" && (isPendingPage || isRejectedPage)) {
-      return <Navigate to="/tienda/dashboard" replace />;
-    }
-
-    return <>{children}</>;
   }
 
-  /* ============================================================
-     ✅ Si pasa todas las validaciones
-     ============================================================ */
   return <>{children}</>;
 };
 

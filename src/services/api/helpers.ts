@@ -7,8 +7,9 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
  ============================================================ */
 export const fetchWithAuth = async (endpoint: string, options: RequestInit = {}) => {
   const token = localStorage.getItem('authToken');
+
+  // Ya NO redirigimos desde aquí
   if (!token) {
-    window.location.href = '/login?sessionExpired=true';
     throw new Error('No estás autenticado.');
   }
 
@@ -21,8 +22,7 @@ export const fetchWithAuth = async (endpoint: string, options: RequestInit = {})
   if (!response.ok) {
     if (response.status === 401) {
       localStorage.clear();
-      window.location.href = '/login?sessionExpired=true';
-      throw new Error('Tu sesión ha expirado. Por favor, inicia sesión de nuevo.');
+      throw new Error('Tu sesión ha expirado.');
     }
     try {
       const errorData = await response.json();
@@ -36,11 +36,7 @@ export const fetchWithAuth = async (endpoint: string, options: RequestInit = {})
   }
 
   if (response.status === 204) return null;
-  try {
-    return await response.json();
-  } catch {
-    throw new Error('Respuesta del servidor no es JSON válido.');
-  }
+  return response.json();
 };
 
 /* ============================================================
@@ -65,11 +61,7 @@ export const fetchWithoutAuth = async (endpoint: string, options: RequestInit = 
   }
 
   if (response.status === 204) return null;
-  try {
-    return await response.json();
-  } catch {
-    throw new Error('Respuesta del servidor no es JSON válido.');
-  }
+  return response.json();
 };
 
 export { API_BASE_URL };

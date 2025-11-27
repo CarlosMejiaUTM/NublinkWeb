@@ -258,3 +258,30 @@ export const getCategories = async (): Promise<any[]> => {
   console.log("🟢 Categorías cargadas:", res.data);
   return res.data;
 };
+/** 🧾 Historial completo de suscripciones/pagos por tienda */
+export const getAdminStorePaymentsHistory = async (storeId: string): Promise<any[]> => {
+  const res = await fetchWithAuth(`/web/superadmin/${storeId}/historial-payments`, {
+    method: "GET",
+  });
+
+  if (!res?.data) {
+    console.error("❌ Error cargando historial:", res);
+    throw new Error("No se pudo obtener el historial de pagos");
+  }
+
+  console.log("🟢 Historial de pagos cargado:", res.data);
+  return res.data;
+};
+
+/** 💳 Resumen global de suscripciones para SUPERADMIN */
+export const getAdminSubscriptionsSummary = async (): Promise<any> => {
+  const res = await fetchWithAuth("/web/superadmin/summary", { method: "GET" });
+
+  // El backend NO usa "data", así que devolvemos la respuesta completa
+  if (!res) {
+    throw new Error("No se pudo obtener el resumen de suscripciones");
+  }
+
+  console.log("🟢 Resumen de suscripciones cargado:", res);
+  return res; // retorna el JSON completo
+};

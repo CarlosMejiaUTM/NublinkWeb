@@ -5,7 +5,6 @@ import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import ProtectedRoute from './components/common/ProtectedRoute';
 import './styles/theme.css';
 
-
 // Layouts
 import AdminDashboardLayout from './layouts/AdminDashboardLayout';
 import DashboardLayout from './layouts/DashboardLayout';
@@ -15,6 +14,11 @@ import ProtectedRecommendationsRoute from './layouts/ProtectedRecommendationsRou
 import LandingPage from './pages/Landing';
 import LoginPage from './pages/auth/Login';
 import StoreRegistrationPage from './pages/auth/StoreRegistration';
+
+// *** NUEVAS PANTALLAS RECOVERY ***
+import RecoveryRequestPage from './pages/auth/RecoveryRequestPage';
+import RecoveryVerifyPage from './pages/auth/RecoveryVerifyPage';
+import AdminResetPasswordPage from './pages/admin-panel/AdminResetPasswordPage';
 
 // Páginas Tienda
 import PendingStore from './pages/store-panel/PendingStore';
@@ -63,12 +67,17 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
+
         {/*  PÚBLICAS */}
         <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/registro-tienda" element={<StoreRegistrationPage />} />
 
-        {/*  PANEL TIENDA */}
+        {/* ⭐ NUEVAS RUTAS RECOVERY ⭐ */}
+        <Route path="/recuperar" element={<RecoveryRequestPage />} />
+        <Route path="/recuperar/verificar" element={<RecoveryVerifyPage />} />
+
+        {/* PANEL TIENDA */}
         <Route
           path="/tienda/dashboard"
           element={<StoreLayoutWrapper pageTitle="Inicio" pageDescription="Resumen del rendimiento de tu tienda."><StoreDashboardPage /></StoreLayoutWrapper>}
@@ -81,7 +90,7 @@ function App() {
           path="/tienda/pedidos"
           element={<StoreLayoutWrapper pageTitle="Pedidos y Apartados" pageDescription="Gestiona las reservas y compras."><StoreOrdersPage /></StoreLayoutWrapper>}
         />
-       <Route
+        <Route
           path="/tienda/reportes"
           element={
             <StoreLayoutWrapper pageTitle="Reportes IA" pageDescription="Dale un seguimiento a tus productos y visualiza datos reales.">
@@ -91,7 +100,6 @@ function App() {
             </StoreLayoutWrapper>
           }
         />
-        
         <Route
           path="/tienda/reportes"
           element={<StoreLayoutWrapper pageTitle="Reportes" pageDescription="Estadísticas detalladas de rendimiento."><StoreReportsPage /></StoreLayoutWrapper>}
@@ -110,8 +118,8 @@ function App() {
           path="/tienda/configuracion"
           element={<StoreLayoutWrapper pageTitle="Configuración" pageDescription="Administra el perfil de tu tienda y cuenta."><StoreSettingsPage /></StoreLayoutWrapper>}
         />
-        
-        {/* ✅ RUTA DE MEJORAR PLAN - SIN ProtectedRecommendationsRoute */}
+
+        {/* Mejorar plan */}
         <Route
           path="/tienda/mejorar-plan"
           element={
@@ -123,7 +131,7 @@ function App() {
           }
         />
 
-        {/* ✅ RUTA DE RECOMENDACIONES - CON ProtectedRecommendationsRoute */}
+        {/* Recomendaciones IA */}
         <Route
           path="/tienda/recomendaciones"
           element={
@@ -135,7 +143,7 @@ function App() {
           }
         />
 
-        {/* Estados de tienda */}
+        {/* Estados tienda */}
         <Route path="/tienda/pendiente" element={<ProtectedRoute allowedRoles={['store']}><PendingStore /></ProtectedRoute>} />
         <Route path="/tienda/rechazada" element={<ProtectedRoute allowedRoles={['store']}><RejectedStore /></ProtectedRoute>} />
 
@@ -172,6 +180,17 @@ function App() {
           path="/admin/tienda/:id"
           element={<AdminLayoutWrapper pageTitle="Detalle de Tienda" pageDescription="Información y estadísticas de la tienda seleccionada."><AdminStoreDetailPage /></AdminLayoutWrapper>}
         />
+
+        {/* ⭐ NUEVA RUTA ADMIN RESET PASSWORD ⭐ */}
+        <Route
+          path="/admin/reset-password/:id"
+          element={
+            <AdminLayoutWrapper pageTitle="Resetear Contraseña" pageDescription="Restablece la contraseña de un usuario.">
+              <AdminResetPasswordPage />
+            </AdminLayoutWrapper>
+          }
+        />
+
       </Routes>
     </BrowserRouter>
   );
