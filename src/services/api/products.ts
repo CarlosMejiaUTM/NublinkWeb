@@ -140,6 +140,20 @@ export interface Apartado {
   updated_at: string;
 }
 
+
+export interface Comprasfisicas {
+  id: number;
+  user: User;
+  store: Store;
+  product: ProductDetail;
+  quantity: number;
+  unit_price: string;
+  total_price: string;
+  status: 'pendiente' | 'recogido' | 'vencido';
+  created_at: string;
+  updated_at: string;
+}
+
 export interface ApartadosResponse {
   ok: boolean;
   total: number;
@@ -394,9 +408,60 @@ export const getPickedUpPurchases = async (): Promise<FullPurchase[]> => {
 };
 
 /* ============================================================
-   💰 Apartados
+   💰 Compras fisicas
 ============================================================ */
 
+/* ============================================================
+   💰 Compras fisicas
+============================================================ */
+
+export const getComprasFisicas = async (
+  status: 'pendiente' | 'recogido' | 'vencido'
+): Promise<Comprasfisicas[]> => {
+  try {
+    // ✅ El endpoint devuelve DIRECTAMENTE un array, no un objeto con .data
+    const result = await fetchWithAuth(
+      `/web/stores/listar`,
+      { 
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ status }),
+      }
+    );
+
+    console.log('📦 Respuesta raw de compras físicas:', result);
+
+    // ✅ CAMBIO CRÍTICO: El API devuelve un array directamente
+    if (!Array.isArray(result)) {
+      console.warn("⚠️ Respuesta inválida en comprasfisicas (no es array):", result);
+      return [];
+    }
+
+    return result; // ✅ Devolver directamente el array
+  } catch (error) {
+    console.error(`Error al obtener compras fisicas con estado ${status}:`, error);
+    throw error;
+  }
+};
+export const getpendfisico = async (): Promise<Comprasfisicas[]> => {
+  return getComprasFisicas('pendiente');
+};
+
+export const getrecogidosifico = async (): Promise<Comprasfisicas[]> => {
+  return getComprasFisicas('recogido');
+};
+
+export const getvencidofisico = async (): Promise<Comprasfisicas[]> => {
+  return getComprasFisicas('vencido');
+};
+
+
+
+/* ============================================================
+   📦 Obtener Todos los Apartados y Compras Completas
+============================================================ */
 export const getApartados = async (
   status: 'apartado' | 'liquidado' | 'recogido'
 ): Promise<Apartado[]> => {
@@ -430,28 +495,16 @@ export const getPickedUpApartados = async (): Promise<Apartado[]> => {
   return getApartados('recogido');
 };
 
-export const getAllApartados = async (): Promise<{
-  apartados: Apartado[];
-  liquidados: Apartado[];
-  recogidos: Apartado[];
-}> => {
-  try {
-    const [apartados, liquidados, recogidos] = await Promise.all([
-      getActiveApartados(),
-      getLiquidatedApartados(),
-      getPickedUpApartados(),
-    ]);
 
-    return {
-      apartados,
-      liquidados,
-      recogidos,
-    };
-  } catch (error) {
-    console.error("Error al obtener todos los apartados:", error);
-    throw error;
-  }
-};
+
+
+
+
+
+
+
+
+
 
 export const getAllFullPurchases = async (): Promise<{
   pendientes: FullPurchase[];
@@ -612,5 +665,32 @@ export const markApartadoAsPickedUp = async (apartadoId: number): Promise<Aparta
   } catch (error: any) {
     console.error("Error al marcar apartado como recogido:", error);
     throw new Error(error.message || "No se pudo marcar el apartado como recogido");
+  }
+};
+
+export const markproductfisicoPickedUp = async (ComprafisicaId: number): Promise<Comprasfisicas> => {
+  try {
+    const result = await fetchWithAuth(
+      `/web/stores/recoger`,
+      { 
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ fisico_id: ComprafisicaId }),
+      }
+    );
+
+    console.log('📦 Respuesta de marcar recogido:', result);
+
+    // ✅ El API devuelve { ok, message, data }
+    if (!result?.ok || !result?.data) {
+      throw new Error(result?.message || "Error al marcar el producto como recogido");
+    }
+
+    return result.data;
+  } catch (error: any) {
+    console.error("Error al marcar el producto fisico como recogido:", error);
+    throw new Error(error.message || "No se pudo marcar el producto fisico como recogido");
   }
 };

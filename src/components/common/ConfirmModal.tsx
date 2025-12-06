@@ -13,7 +13,7 @@ interface ConfirmModalProps {
   type?: "confirm" | "success" | "error" | "loading";
   onConfirm?: () => void;
   onCancel?: () => void;
-  state: "confirm" | "success"; // ✅ Maneja estados principales
+  state?: "confirm" | "success" | "error" | "loading"; // ✅ Cambiado a opcional y agregados todos los estados
 }
 
 const ConfirmModal: React.FC<ConfirmModalProps> = ({
@@ -42,7 +42,7 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
   if (!isOpen) return null;
 
   // ✅ Si no se pasa un "type" manualmente, lo definimos según el estado
-  const effectiveType = type || (state === "success" ? "success" : "confirm");
+  const effectiveType = type || state || "confirm";
 
   const LoadingSpinner = () => (
     <div className="flex justify-center">

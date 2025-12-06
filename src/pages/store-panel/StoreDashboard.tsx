@@ -179,13 +179,7 @@ const StoreDashboardPage = () => {
   // --- 📈 Procesamos los datos de ventas para el gráfico ---
   const salesTrendData = useMemo(() => {
     if (!data || !data.last_sales || data.last_sales.length === 0) {
-      // Devolver datos de ejemplo si no hay ventas
-      return [
-        { label: "00:00", value: 0 },
-        { label: "06:00", value: 0 },
-        { label: "12:00", value: 0 },
-        { label: "18:00", value: 0 },
-      ];
+      return []; // ✅ Devolver array vacío en lugar de datos simulados
     }
     
     const grouped: Record<string, number> = {};
@@ -199,6 +193,7 @@ const StoreDashboardPage = () => {
       .sort(([a], [b]) => (a > b ? 1 : -1))
       .map(([hour, value]) => ({ label: hour, value }));
   }, [data]);
+
 
   // --- Render principal ---
   const renderContent = () => {

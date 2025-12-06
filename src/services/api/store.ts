@@ -136,6 +136,7 @@ export const updateStoreProfile = async (data: Partial<Store & User>): Promise<U
   // La API devuelve { ok: true, data: { user con store anidado } }
   return response.data || response;
 };
+
 /**
  * 📦 Obtener la suscripción activa de la tienda
  */
@@ -144,6 +145,26 @@ export const getStoreSubscription = async (): Promise<any> => {
   return await fetchWithAuth(SUBSCRIPTION_ENDPOINT, { method: 'GET' });
 };
 
+/**
+ * 🚫 Dar de baja la cuenta de la tienda (rechazar tienda)
+ */
+export const cancelStoreAccount = async (storeId: number, comment?: string): Promise<any> => {
+  const REJECT_ENDPOINT = `/web/superadmin/${storeId}/reject`;
+  
+  const response = await fetchWithAuth(REJECT_ENDPOINT, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      comment: comment || 'Cancelación solicitada por el usuario desde el panel de configuración'
+    }),
+  });
+
+  if (!response) {
+    throw new Error('Error al dar de baja la cuenta');
+  }
+
+  return response;
+};
 
 /* ============================================================
  🧠 FUNCIÓN UNIFICADA (SuperAdmin o Tienda)
@@ -180,5 +201,3 @@ export const getDashboardData = async (user: User, storeId?: string): Promise<St
     throw new Error('No se pudieron cargar las estadísticas del dashboard.');
   }
 };
-
-

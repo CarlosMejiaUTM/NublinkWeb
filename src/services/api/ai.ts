@@ -1,62 +1,84 @@
-
 import { getStoreProfile } from './store';
 
-// ==================== TIPOS ====================
 export interface AIRecommendation {
-  top_products: Array<{
-    name?: string;
-    productName?: string;
-    productname?: string;
-    qty?: number;
-    totalQty?: number;
-    totalqty?: number;
-    revenue?: number;
-    totalRevenue?: number;
-    totalrevenue?: number;
-    comparison?: string;
-    comparison_with_global_avg?: string;
-    comparison_vs_global?: string;
-    reasons?: string[];
-    possible_reasons?: string[];
-    reason_1?: string;
-    reason_2?: string;
+  store_id: number;
+  topProducts: Array<{
+    id: number;
+    name: string;
+    total_sold: number;
   }>;
-  low_products: Array<{
-    name?: string;
-    productName?: string;
-    productname?: string;
-    qty?: number;
-    totalQty?: number;
-    totalqty?: number;
-    revenue?: number;
-    totalRevenue?: number;
-    totalrevenue?: number;
-    comparison?: string;
-    comparison_with_global_avg?: string;
-    comparison_vs_global?: string;
-    actions?: string[];
-    recommended_actions?: string[];
-    recommended_action_1?: string;
-    recommended_action_2?: string;
-    action_1?: string;
-    action_2?: string;
+  lowProducts: Array<{
+    id: number;
+    name: string;
+    total_sold: number;
   }>;
-  executive_summary: string;
-  recommendations?: string;
+  aiSummary: string;
+  aiTopProductAnalysis: string[];
+  aiLowProductAnalysis: string[];
 }
 
+// ✅ INTERFACE CORREGIDA según el response real de reportes
 export interface RawData {
-  top_products: Array<{
-    productName: string;
-    totalQty: number;
-    totalRevenue: number;
+  store_id: number;
+  apartado: Array<{
+    id: number;
+    product: {
+      id: number;
+      name: string;
+      price: string;
+      stock: number;
+    };
+    quantity: number;
+    unit_price: string;
+    total_price: string;
+    product_name?: string;  // Retrocompatibilidad
+    total?: number;         // Retrocompatibilidad
   }>;
-  low_products: Array<{
-    productName: string;
-    totalQty: number;
-    totalRevenue: number;
+  full: Array<{
+    id: number;
+    product: {
+      id: number;
+      name: string;
+      price: string;
+      stock: number;
+    };
+    quantity: number;
+    unit_price: string;
+    total_price: string;
+    product_name?: string;  // Retrocompatibilidad
+    total?: number;         // Retrocompatibilidad
   }>;
-  sales_total: number;
+  fisico: Array<{
+    id: number;
+    product: {
+      id: number;
+      name: string;
+      price: string;
+      stock: number;
+    };
+    quantity: number;
+    unit_price: string;
+    total_price: string;
+    product_name?: string;  // Retrocompatibilidad
+    total?: number;         // Retrocompatibilidad
+  }>;
+  top_sales: Array<{
+    id: number;
+    name: string;
+    total_sold: number;
+  }>;
+  top_lowest_sales: Array<{
+    id: number;
+    name: string;
+    total_sold: number;
+  }>;
+  total_sales: number | null;
+  total_products_sales: number;
+  average_ticket: number | null;
+  month_range: {
+    from: string;
+    to: string;
+  };
 }
 
 export interface FullAPIResponse {
@@ -64,126 +86,37 @@ export interface FullAPIResponse {
   ai_parsed: AIRecommendation;
 }
 
-// ==================== HELPERS ====================
-const toNumber = (value: any): number => {
-  if (typeof value === 'number') return value;
-  if (typeof value === 'string') {
-    const parsed = parseFloat(value.replace(/,/g, ''));
-    return isNaN(parsed) ? 0 : parsed;
-  }
-  return 0;
-};
+// ✅ INTERFACE CORREGIDA según el response real
+export interface PromotionsData {
+  store_id: number;
+  products: Array<{
+    id: number;
+    product: {
+      id: number;
+      name: string;
+      price: string;
+      stock: number;
+    };
+    quantity: number;
+    unit_price: string;
+    total_price: string;
+  }>;
+  promotionRecommendations: string[];
+  pricingSuggestions: string[];
+  visibilityTips: string[];
+}
 
-const extractJsonFromAI = (aiString: string): any => {
+export const fetchAIRecommendationsstats = async (): Promise<AIRecommendation> => {
   try {
-    let cleaned = aiString.trim();
+    const user = await getStoreProfile();
     
-    const markdownMatch = cleaned.match(/```json\s*([\s\S]*?)\s*```/);
-    if (markdownMatch && markdownMatch[1]) {
-      cleaned = markdownMatch[1].trim();
-    } else {
-      const simpleMarkdownMatch = cleaned.match(/```\s*([\s\S]*?)\s*```/);
-      if (simpleMarkdownMatch && simpleMarkdownMatch[1]) {
-        cleaned = simpleMarkdownMatch[1].trim();
-      }
+    if (!user?.store?.id) {
+      throw new Error('No se pudo obtener la información de tu tienda');
     }
     
-    return JSON.parse(cleaned);
-  } catch (error) {
-    console.error('❌ Error al parsear JSON de IA:', error);
-    throw new Error('No se pudo procesar la respuesta de la IA');
-  }
-};
+    const storeId = user.store.id;
+    const endpoint = `https://lookappapi.onrender.com/purchases/store/${storeId}/recommendations`;
 
-// Generar recomendaciones automáticas basadas en datos
-const generateRecommendations = (product: any, isTopProduct: boolean): string[] => {
-  const recommendations: string[] = [];
-  const qty = toNumber(product.qty || product.totalQty || 0);
-  const revenue = toNumber(product.revenue || product.totalRevenue || 0);
-  
-  if (isTopProduct) {
-    // Para productos estrella
-    recommendations.push('✅ Mantén este producto siempre disponible en stock.');
-    recommendations.push('📣 Considera promocionarlo como "Bestseller" para aumentar aún más las ventas.');
-    recommendations.push('🎯 Aumenta su visibilidad en la tienda física o digital.');
-  } else {
-    // Para productos con oportunidades
-    recommendations.push('💡 Mejora la descripción del producto y añade mejores imágenes.');
-    recommendations.push('🎁 Crea bundles con productos complementarios para aumentar ventas.');
-    recommendations.push('📍 Reubica este producto en un lugar más visible de tu tienda.');
-    recommendations.push('🏷️ Considera implementar descuentos o promociones 2x1.');
-  }
-  
-  return recommendations;
-};
-
-const normalizeTopProduct = (product: any): any => {
-  const productName = product.name || product.productName || 'Producto sin nombre';
-  const qty = toNumber(product.qty || product.totalQty || 0);
-  const revenue = toNumber(product.revenue || product.totalRevenue || 0);
-
-  const normalized: any = {
-    productname: productName,
-    totalqty: qty,
-    totalrevenue: revenue,
-  };
-
-  // Usar razones si existen, sino generar automáticamente
-  if (product.reasons && Array.isArray(product.reasons) && product.reasons.length > 0) {
-    normalized.possible_reasons = product.reasons;
-    normalized.reason_1 = product.reasons[0];
-    if (product.reasons.length > 1) normalized.reason_2 = product.reasons[1];
-  } else {
-    const reasons = generateRecommendations(normalized, true);
-    normalized.possible_reasons = reasons;
-    normalized.reason_1 = reasons[0];
-    if (reasons.length > 1) normalized.reason_2 = reasons[1];
-  }
-
-  // Comparación si existe
-  if (product.comparison) {
-    normalized.comparison_with_global_avg = product.comparison;
-  }
-
-  return normalized;
-};
-
-const normalizeLowProduct = (product: any): any => {
-  const productName = product.name || product.productName || 'Producto sin nombre';
-  const qty = toNumber(product.qty || product.totalQty || 0);
-  const revenue = toNumber(product.revenue || product.totalRevenue || 0);
-
-  const normalized: any = {
-    productname: productName,
-    totalqty: qty,
-    totalrevenue: revenue,
-  };
-
-  // Usar acciones si existen, sino generar automáticamente
-  if (product.actions && Array.isArray(product.actions) && product.actions.length > 0) {
-    normalized.recommended_actions = product.actions;
-    normalized.recommended_action_1 = product.actions[0];
-    if (product.actions.length > 1) normalized.recommended_action_2 = product.actions[1];
-  } else {
-    const actions = generateRecommendations(normalized, false);
-    normalized.recommended_actions = actions;
-    normalized.recommended_action_1 = actions[0];
-    if (actions.length > 1) normalized.recommended_action_2 = actions[1];
-  }
-
-  // Comparación si existe
-  if (product.comparison) {
-    normalized.comparison_with_global_avg = product.comparison;
-  }
-
-  return normalized;
-};
-
-// ==================== FUNCIÓN PRINCIPAL ====================
-export const getStoreAnalysis = async (storeId: number): Promise<FullAPIResponse> => {
-  const endpoint = `https://lookappapi.onrender.com/analyze/${storeId}/stats`;
-  
-  try {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 180000);
 
@@ -204,73 +137,48 @@ export const getStoreAnalysis = async (storeId: number): Promise<FullAPIResponse
       throw new Error(`Error del servidor (${response.status})`);
     }
 
-    const json = await response.json();
+    const result = await response.json();
 
-    console.log('📦 Respuesta completa del backend:', json);
-
-    if (!json.data || !json.ai) {
+    if (!result || typeof result !== 'object') {
       throw new Error('La respuesta del servidor no tiene el formato esperado');
     }
 
-    const parsed = extractJsonFromAI(json.ai);
-
-    if (!parsed || typeof parsed !== 'object') {
-      throw new Error('La respuesta de IA no tiene el formato correcto');
-    }
-    
-    if (!parsed.top_products && !parsed.low_products) {
-      throw new Error('No hay suficientes datos para generar recomendaciones');
-    }
-
-    // Procesar productos top
-    let topProducts: any[] = [];
-    if (parsed.top_products && Array.isArray(parsed.top_products)) {
-      topProducts = parsed.top_products
-        .map((p: any) => {
-          try {
-            return normalizeTopProduct(p);
-          } catch (err) {
-            console.warn('Error al procesar producto top:', err);
-            return null;
-          }
-        })
-        .filter((p: any) => p !== null);
-    }
-
-    // Procesar productos low
-    let lowProducts: any[] = [];
-    if (parsed.low_products && Array.isArray(parsed.low_products)) {
-      lowProducts = parsed.low_products
-        .map((p: any) => {
-          try {
-            return normalizeLowProduct(p);
-          } catch (err) {
-            console.warn('Error al procesar producto low:', err);
-            return null;
-          }
-        })
-        .filter((p: any) => p !== null);
-    }
-
-    // Procesar executive summary (ya viene en español del backend)
-    let executiveSummary = '';
-    if (parsed.executive_summary && typeof parsed.executive_summary === 'string') {
-      executiveSummary = parsed.executive_summary.trim();
-    }
-
-    if (topProducts.length === 0 && lowProducts.length === 0) {
-      throw new Error('No se encontraron productos válidos en el análisis');
-    }
-
-    return {
-      data: json.data,
-      ai_parsed: {
-        top_products: topProducts,
-        low_products: lowProducts,
-        executive_summary: executiveSummary,
-        recommendations: parsed.recommendations || '',
-      },
+    const processAnalysis = (analysis: any): string[] => {
+      if (Array.isArray(analysis)) {
+        return analysis
+          .filter((line: any) => typeof line === 'string')
+          .map((line: string) => line.trim())
+          .filter((line: string) => line.length > 0);
+      }
+      
+      if (typeof analysis === 'string' && analysis.trim()) {
+        return analysis
+          .split('\n')
+          .map((line: string) => line.trim())
+          .filter((line: string) => line.length > 0);
+      }
+      
+      return [];
     };
+
+    const aiRecommendation: AIRecommendation = {
+      store_id: typeof result.store_id === 'number' ? result.store_id : storeId,
+      topProducts: Array.isArray(result.topProducts) ? result.topProducts.map((p: any) => ({
+        id: Number(p.id || 0),
+        name: String(p.name || ''),
+        total_sold: Number(p.total_sold || 0)
+      })) : [],
+      lowProducts: Array.isArray(result.lowProducts) ? result.lowProducts.map((p: any) => ({
+        id: Number(p.id || 0),
+        name: String(p.name || ''),
+        total_sold: Number(p.total_sold || 0)
+      })) : [],
+      aiSummary: typeof result.aiSummary === 'string' ? result.aiSummary.trim() : '',
+      aiTopProductAnalysis: processAnalysis(result.aiTopProductAnalysis || []),
+      aiLowProductAnalysis: processAnalysis(result.aiLowProductAnalysis || []),
+    };
+
+    return aiRecommendation;
 
   } catch (error: any) {
     if (error.name === 'AbortError') {
@@ -285,22 +193,6 @@ export const getStoreAnalysis = async (storeId: number): Promise<FullAPIResponse
   }
 };
 
-// ==================== FUNCIONES EXPORTADAS ====================
-export const fetchAIRecommendations = async (): Promise<AIRecommendation> => {
-  try {
-    const user = await getStoreProfile();
-    
-    if (!user?.store?.id) {
-      throw new Error('No se pudo obtener la información de tu tienda');
-    }
-    
-    const fullResponse = await getStoreAnalysis(user.store.id);
-    return fullResponse.ai_parsed;
-  } catch (error: any) {
-    throw error;
-  }
-};
-
 export const fetchRawReportData = async (): Promise<RawData> => {
   try {
     const user = await getStoreProfile();
@@ -309,20 +201,69 @@ export const fetchRawReportData = async (): Promise<RawData> => {
       throw new Error('No se pudo obtener la información de tu tienda');
     }
     
-    const fullResponse = await getStoreAnalysis(user.store.id);
-    
-    console.log('🔍 Full Response:', fullResponse);
-    console.log('🔍 Data:', fullResponse.data);
-    
-    // Verificar que la estructura sea correcta
-    if (!fullResponse.data) {
-      throw new Error('No se recibieron datos del servidor');
+    const storeId = user.store.id;
+    const endpoint = `https://lookappapi.onrender.com/purchases/store/${storeId}`;
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 180000);
+
+    const response = await fetch(endpoint, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+      signal: controller.signal,
+    });
+
+    clearTimeout(timeoutId);
+
+    if (!response.ok) {
+      if (response.status === 404) throw new Error('No se encontró información para esta tienda');
+      if (response.status === 500) throw new Error('Error en el servidor. Intenta de nuevo');
+      throw new Error(`Error del servidor (${response.status})`);
+    }
+
+    const result = await response.json();
+
+    if (!result || typeof result !== 'object') {
+      throw new Error('La respuesta del servidor no tiene el formato esperado');
+    }
+
+    // ✅ Normalizar datos para retrocompatibilidad
+    const normalizeProduct = (item: any) => {
+      // Si viene con estructura nueva (product anidado)
+      if (item.product && typeof item.product === 'object') {
+        return {
+          ...item,
+          product_name: item.product.name,  // Agregar campo plano
+          total: parseFloat(item.total_price || '0'),  // Agregar campo plano
+        };
+      }
+      // Si viene con estructura antigua
+      return item;
+    };
+
+    const normalizedData: RawData = {
+      ...result,
+      apartado: Array.isArray(result.apartado) ? result.apartado.map(normalizeProduct) : [],
+      full: Array.isArray(result.full) ? result.full.map(normalizeProduct) : [],
+      fisico: Array.isArray(result.fisico) ? result.fisico.map(normalizeProduct) : [],
+      top_sales: Array.isArray(result.top_sales) ? result.top_sales : [],
+      top_lowest_sales: Array.isArray(result.top_lowest_sales) ? result.top_lowest_sales : [],
+    };
+
+    return normalizedData;
+
+  } catch (error: any) {
+    if (error.name === 'AbortError') {
+      throw new Error('La solicitud tardó demasiado tiempo. Intenta nuevamente.');
     }
     
-    // El backend devuelve los datos directamente en json.data
-    return fullResponse.data;
-  } catch (error: any) {
-    console.error('❌ Error en fetchRawReportData:', error);
+    if (error.message?.includes('Failed to fetch')) {
+      throw new Error('Error de conexión. Verifica tu internet.');
+    }
+
     throw error;
   }
 };
@@ -335,8 +276,138 @@ export const fetchFullStoreData = async (): Promise<FullAPIResponse> => {
       throw new Error('No se pudo obtener la información de tu tienda');
     }
     
-    return await getStoreAnalysis(user.store.id);
+    throw new Error('Esta función ya no está disponible con el nuevo endpoint');
   } catch (error: any) {
+    throw error;
+  }
+};
+
+// ✅ FUNCIÓN COMPLETAMENTE CORREGIDA
+export const fetchPromotionsData = async (): Promise<PromotionsData> => {
+  try {
+    const user = await getStoreProfile();
+    
+    if (!user?.store?.id) {
+      throw new Error('No se pudo obtener la información de tu tienda');
+    }
+    
+    const storeId = user.store.id;
+    const endpoint = `https://lookappapi.onrender.com/purchases/store/${storeId}/promotions`;
+
+    console.log('🔍 Fetching promotions from:', endpoint);
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 180000);
+
+    const response = await fetch(endpoint, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+      signal: controller.signal,
+    });
+
+    clearTimeout(timeoutId);
+
+    console.log('📡 Response status:', response.status);
+
+    if (!response.ok) {
+      const contentType = response.headers.get('content-type');
+      let errorMessage = `Error del servidor (${response.status})`;
+      
+      try {
+        if (contentType?.includes('application/json')) {
+          const errorData = await response.json();
+          errorMessage = errorData.message || errorData.error || errorMessage;
+        } else {
+          const errorText = await response.text();
+          console.error('❌ Error response:', errorText.substring(0, 200));
+        }
+      } catch (e) {
+        console.error('❌ Could not parse error response');
+      }
+      
+      if (response.status === 404) {
+        throw new Error('El endpoint de promociones no existe o no hay datos disponibles');
+      }
+      if (response.status === 500) {
+        throw new Error('Error en el servidor. Intenta de nuevo más tarde');
+      }
+      throw new Error(errorMessage);
+    }
+
+    const contentType = response.headers.get('content-type');
+    if (!contentType?.includes('application/json')) {
+      throw new Error(`El servidor devolvió ${contentType} en lugar de JSON`);
+    }
+
+    const result = await response.json();
+    console.log('✅ Promotions data received:', result);
+
+    if (!result || typeof result !== 'object') {
+      throw new Error('La respuesta del servidor no tiene el formato esperado');
+    }
+
+    // Helper para limpiar texto de markdown
+    const cleanMarkdown = (text: string): string => {
+      return text
+        .replace(/\*\*/g, '')  // Eliminar asteriscos
+        .replace(/^#+\s*/g, '') // Eliminar headers markdown
+        .trim();
+    };
+
+    // Helper para filtrar y limpiar arrays de strings
+    const cleanStringArray = (arr: any[]): string[] => {
+      return arr
+        .filter((item: any) => typeof item === 'string')
+        .map((item: string) => cleanMarkdown(item))
+        .filter((item: string) => item.length > 5); // Filtrar strings muy cortos
+    };
+
+    // ✅ Mapear correctamente según la estructura real del response
+    const promotionsData: PromotionsData = {
+      store_id: typeof result.store_id === 'number' ? result.store_id : storeId,
+      
+      // ✅ CORREGIDO: Mapear productos con estructura anidada
+      products: Array.isArray(result.products) ? result.products.map((item: any) => ({
+        id: Number(item.id || 0),
+        product: {
+          id: Number(item.product?.id || 0),
+          name: String(item.product?.name || ''),
+          price: String(item.product?.price || '0.00'),
+          stock: Number(item.product?.stock || 0)
+        },
+        quantity: Number(item.quantity || 0),
+        unit_price: String(item.unit_price || '0.00'),
+        total_price: String(item.total_price || '0.00')
+      })) : [],
+      
+      // ✅ Limpiar arrays de recomendaciones
+      promotionRecommendations: Array.isArray(result.promotionRecommendations) 
+        ? cleanStringArray(result.promotionRecommendations)
+        : [],
+      
+      pricingSuggestions: Array.isArray(result.pricingSuggestions)
+        ? cleanStringArray(result.pricingSuggestions)
+        : [],
+      
+      visibilityTips: Array.isArray(result.visibilityTips)
+        ? cleanStringArray(result.visibilityTips)
+        : [],
+    };
+
+    return promotionsData;
+
+  } catch (error: any) {
+    if (error.name === 'AbortError') {
+      throw new Error('La solicitud tardó demasiado tiempo. Intenta nuevamente.');
+    }
+    
+    if (error.message?.includes('Failed to fetch')) {
+      throw new Error('Error de conexión. Verifica tu internet.');
+    }
+
     throw error;
   }
 };

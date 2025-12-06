@@ -13,7 +13,7 @@ import {
   ExclamationTriangleIcon,
 } from "@heroicons/react/20/solid";
 import type { Product } from "@/types";
-import type { FullPurchase, Apartado, ProductCategory } from "@/services/api/products";
+import type { FullPurchase, Apartado, ProductCategory, Comprasfisicas } from "@/services/api/products";
 import { updateProduct, deleteProduct, getProductCategories } from "@/services/api/products";
 import Card from "@/components/common/Card";
 import Button from "@/components/common/Button";
@@ -22,16 +22,18 @@ import ConfirmModal from "@/components/common/ConfirmModal";
 /* ============================================================
    TIPOS
 ============================================================ */
-type ViewMode = 'products' | 'purchases' | 'apartados';
+type ViewMode = 'products' | 'purchases' | 'apartados' | 'comprasfisicas';
 
 interface ProductTableProps {
   products?: Product[];
   purchases?: FullPurchase[];
   apartados?: Apartado[];
+  comprasfisicas?: Comprasfisicas[];
   viewMode: ViewMode;
   onMarkAsPickedUp?: (purchase: FullPurchase) => void; 
   onProductUpdated?: () => void;
   onMarkApartadoAsPickedUp?: (apartado: Apartado) => void; // ✅ Nueva prop
+  onMarkComprasFisicasPickedUp?: (comprasfisicas: Comprasfisicas) => void; 
 
 }
 
@@ -631,10 +633,102 @@ const ApartadosTable = ({
     </div>
   </Card>
 );
+
+
+
+
+/* ============================================================
+   TABLA DE COMPRAS FISICAs
+============================================================ */
+// ✅ BIEN - Reemplazar toda la tabla desde línea 517:
+const ComprasFisicasTable = ({ 
+  comprasfisicas,
+  onMarkComprasFisicasPickedUp 
+}: { 
+  comprasfisicas: Comprasfisicas[];
+  onMarkComprasFisicasPickedUp?: (comprafisica: Comprasfisicas) => void;
+}) => (
+  <Card className="overflow-hidden p-0">
+    <div className="overflow-x-auto">
+      <table className="w-full text-sm">
+        <thead className="bg-secondary text-text-main">
+          <tr>
+            <th className="p-4 text-left">Producto</th>
+            <th className="p-4 text-left">Cliente</th>
+            <th className="p-4 text-left">Cant.</th>
+            <th className="p-4 text-left">Total</th>
+            <th className="p-4 text-left">Estado</th>
+            <th className="p-4 text-left">Fecha</th>
+            <th className="p-4 text-right">Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          {comprasfisicas.map((comprafisica) => (
+            <tr key={comprafisica.id} className="border-t hover:bg-secondary-light transition-colors">
+              <td className="p-4">
+                <div className="flex items-center gap-3">
+                  <ProductAvatar 
+                    name={comprafisica.product.name} 
+                    imageUrl={comprafisica.product.imageUrl} 
+                  />
+                  <div>
+                    <div className="font-semibold text-text-main">{comprafisica.product.name}</div>
+                    <p className="text-xs text-text-muted">ID: {comprafisica.product.id}</p>
+                  </div>
+                </div>
+              </td>
+              <td className="p-4">
+                <UserBadge name={comprafisica.user.name} email={comprafisica.user.email} />
+              </td>
+              <td className="p-4">
+                <span className="font-medium text-text-main">{comprafisica.quantity}</span>
+              </td>
+              <td className="p-4">
+                <div className="font-bold text-text-main">${comprafisica.total_price}</div>
+                <div className="text-xs text-text-muted">${comprafisica.unit_price} c/u</div>
+              </td>
+              <td className="p-4">
+                <StatusBadge status={comprafisica.status} />
+              </td>
+              <td className="p-4">
+                <div className="text-text-main">
+                  {new Date(comprafisica.created_at).toLocaleDateString('es-MX', {
+                    day: '2-digit',
+                    month: 'short',
+                    year: 'numeric'
+                  })}
+                </div>
+                <div className="text-xs text-text-muted">
+                  {new Date(comprafisica.created_at).toLocaleTimeString('es-MX', {
+                    hour: '2-digit',
+                    minute: '2-digit'
+                  })}
+                </div>
+              </td>
+              <td className="p-4 text-right">
+                {comprafisica.status === 'pendiente' && onMarkComprasFisicasPickedUp && (
+                  <Button 
+                    variant="primary" 
+                    size="sm"
+                    onClick={() => onMarkComprasFisicasPickedUp(comprafisica)}
+                    className="whitespace-nowrap"
+                  >
+                    <CheckCircleIcon className="w-4 h-4 mr-1" />
+                    Marcar Recogido
+                  </Button>
+                )}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  </Card>
+);
 /* ============================================================
    COMPONENTE PRINCIPAL
 ============================================================ */
-const ProductTable = ({ products, purchases, apartados, viewMode, onProductUpdated, onMarkAsPickedUp, onMarkApartadoAsPickedUp }: ProductTableProps) => {
+const ProductTable = ({ products, purchases, apartados, comprasfisicas, viewMode, onProductUpdated, onMarkAsPickedUp, onMarkApartadoAsPickedUp, onMarkComprasFisicasPickedUp }: ProductTableProps) => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [categories, setCategories] = useState<ProductCategory[]>([]);
@@ -860,6 +954,13 @@ const ProductTable = ({ products, purchases, apartados, viewMode, onProductUpdat
     <ApartadosTable 
       apartados={apartados}
       onMarkApartadoAsPickedUp={onMarkApartadoAsPickedUp}
+    />
+  ) : null;
+  case 'comprasfisicas':
+  return comprasfisicas ? (
+    <ComprasFisicasTable 
+      comprasfisicas={comprasfisicas}
+      onMarkComprasFisicasPickedUp={onMarkComprasFisicasPickedUp}
     />
   ) : null;
   default:

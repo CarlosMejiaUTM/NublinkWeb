@@ -243,7 +243,7 @@ const handleProductAdded = () => {
                     <NavLink to="/tienda/recomendaciones" className={navLinkClasses}>
                       <LightBulbIcon className="w-5 h-5" /> 
                       <span>Recomendaciones AI</span>
-                      <AILightbulbIcon className="w-4 h-4 ml-auto text-purple-500" />
+                      <AILightbulbIcon className="w-4 h-4 ml-auto text-indigo-500" />
                     </NavLink>
                   </li>
                 ) : (
@@ -268,7 +268,7 @@ const handleProductAdded = () => {
                       <NavLink to="/tienda/reportes" className={navLinkClasses}>
                         <ChartBarIcon className="w-5 h-5" /> 
                         <span>Reportes AI</span>
-                        <AILightbulbIcon className="w-4 h-4 ml-auto text-purple-500" />
+                        <AILightbulbIcon className="w-4 h-4 ml-auto text-indigo-500" />
                       </NavLink>
                     </li>
                   ) : (
@@ -294,7 +294,7 @@ const handleProductAdded = () => {
                       <NavLink to="/tienda/promociones" className={navLinkClasses}>
                         <PromotionIcon className="w-5 h-5" /> 
                         <span>Promociones AI</span>
-                        <AILightbulbIcon className="w-4 h-4 ml-auto text-purple-500" />
+                        <AILightbulbIcon className="w-4 h-4 ml-auto text-indigo-500" />
                       </NavLink>
                     </li>
                   ) : (

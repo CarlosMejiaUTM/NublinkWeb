@@ -1,31 +1,33 @@
 // FileName: StoreProductsPage.tsx
 // Path: src/pages/store-panel/products/StoreProductsPage.tsx
 
-import { useState, useEffect, useMemo, useCallback } from "react";
 import Button from "@/components/common/Button";
 import Card from "@/components/common/Card";
-import ProductTable from "./ProductTable";
-import AddProductForm from "./AddProductForm";
-import type { Product } from "@/types";
-import { type FullPurchase, type Apartado, getFullPurchases, getApartados, markPurchaseAsPickedUp, markApartadoAsPickedUp } from "@/services/api/products";
-import { 
-  PlusIcon, 
-  MagnifyingGlassIcon,
-  XMarkIcon,
-  FunnelIcon,
-  ShoppingCartIcon,
-  CreditCardIcon,
-  CubeIcon
-} from "@heroicons/react/20/solid";
-import { getStoreProducts } from "@/services/api";
 import ConfirmModal from "@/components/common/ConfirmModal";
+import { getStoreProducts } from "@/services/api";
+import { type Apartado, type Comprasfisicas, type FullPurchase, getApartados, getComprasFisicas, getFullPurchases, markApartadoAsPickedUp, markproductfisicoPickedUp, markPurchaseAsPickedUp } from "@/services/api/products";
+import type { Product } from "@/types";
+import {
+  CreditCardIcon,
+  CubeIcon,
+  FunnelIcon,
+  MagnifyingGlassIcon,
+  PlusIcon,
+  ShoppingBagIcon,
+  ShoppingCartIcon,
+  XMarkIcon
+} from "@heroicons/react/20/solid";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import AddProductForm from "./AddProductForm";
+import ProductTable from "./ProductTable";
 
 /* ============================================================
    --- Tipos de Vista ---
 ============================================================ */
-type ViewMode = 'products' | 'purchases' | 'apartados';
+type ViewMode = 'products' | 'purchases' | 'apartados' | 'comprasfisicas'; ;
 type PurchaseStatus = 'pendiente' | 'recogido';
 type ApartadoStatus = 'apartado' | 'liquidado' | 'recogido';
+type ComprasFisicasstatus = 'pendiente' | 'recogido' | 'vencido';
 
 /* ============================================================
    --- Componente de carga ---
@@ -65,7 +67,13 @@ const QuickStats = ({
         return {
           total: 'Total Apartados',
           filtered: 'Mostrando',
-          third: 'Activos',
+          third: 'Apartados',
+        };
+      case 'comprasfisicas':
+        return {
+          total: 'Total Compras Físicas',
+          filtered: 'Mostrando',
+          third: 'Pendientes',
         };
       default:
         return {
@@ -125,6 +133,8 @@ const StoreProductsPage = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [purchases, setPurchases] = useState<FullPurchase[]>([]);
   const [apartados, setApartados] = useState<Apartado[]>([]);
+  const [comprasfisicas, setComprasFisicas] = useState<Comprasfisicas[]>([]);
+
   const [loading, setLoading] = useState(true);
   const [showAddForm, setShowAddForm] = useState(false);
   
@@ -133,6 +143,7 @@ const StoreProductsPage = () => {
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [purchaseStatus, setPurchaseStatus] = useState<PurchaseStatus | 'all'>('all');
   const [apartadoStatus, setApartadoStatus] = useState<ApartadoStatus | 'all'>('all');
+  const [compraFisicaStatus, setCompraFisicaStatus] = useState<ComprasFisicasstatus | 'all'>('all');
 
   // ✅ Estado para modal de marcar como recogido
   const [pickupModal, setPickupModal] = useState({
@@ -142,6 +153,8 @@ const StoreProductsPage = () => {
     message: '',
     type: 'confirm' as 'confirm' | 'success' | 'error' | 'loading',
     purchaseToPickup: null as FullPurchase | null,
+
+
     onConfirm: () => {},
   });
 
@@ -180,13 +193,31 @@ const loadData = useCallback(async () => {
             setApartados(apartadosData);
           }
           break;
+          /*
+          */
+          case 'comprasfisicas':
+          console.log('🔍 Cargando compras físicas con status:', compraFisicaStatus);
+          if (compraFisicaStatus === 'all') {
+            const [ComprasFisicaspendientes, recogido, vencido] = await Promise.all([
+              getComprasFisicas('pendiente'),
+              getComprasFisicas('recogido'),
+              getComprasFisicas('vencido')
+            ]);
+            console.log('📦 Compras físicas cargadas:', { ComprasFisicaspendientes, recogido, vencido });
+            setComprasFisicas([...ComprasFisicaspendientes, ...recogido, ...vencido]);
+          } else {
+            const comprasfisicasData = await getComprasFisicas(compraFisicaStatus);
+            console.log('📦 Compras físicas cargadas (filtradas):', comprasfisicasData);
+            setComprasFisicas(comprasfisicasData);
+          }
+          break;
       }
     } catch (error) {
       console.error(`Error al cargar ${viewMode}:`, error);
     } finally {
       setLoading(false);
     }
-  }, [viewMode, purchaseStatus, apartadoStatus]); // ✅ Dependencias estables
+  }, [viewMode, purchaseStatus, apartadoStatus, compraFisicaStatus]); // ✅ Dependencias estables
 
 useEffect(() => {
   console.log('🔧 StoreProductsPage: useEffect montado/actualizado');
@@ -348,6 +379,70 @@ const handleMarkApartadoAsPickedUp = (apartado: Apartado) => {
   });
 };
 
+
+
+const handleMarkComprasFisicasAsPickedUp = (comprasfisicas: Comprasfisicas) => {
+  setPickupModal({
+    isOpen: true,
+    state: 'confirm',
+    title: '¿Marcar Compra Fisica como recogido?',
+    message: `¿Confirmas que el cliente "${comprasfisicas.user.name}" recogió el producto "${comprasfisicas.product.name}"?`,
+    type: 'confirm',
+    purchaseToPickup: null,
+    onConfirm: async () => {
+      try {
+        setPickupModal({
+          ...pickupModal,
+          isOpen: true,
+          state: 'confirm',
+          title: 'Procesando...',
+          message: 'Marcando el prodiucto como recogido...',
+          
+          type: 'loading',
+          onConfirm: () => {},
+        });
+
+        await markproductfisicoPickedUp(comprasfisicas.id);
+
+        setPickupModal({
+          ...pickupModal,
+          isOpen: true,
+          state: 'success',
+          title: '¡Producto marcado como recogido!',
+          message: 'El estado se ha actualizado correctamente.',
+          type: 'success',
+          onConfirm: () => {
+            setPickupModal({ ...pickupModal, isOpen: false, purchaseToPickup: null });
+          },
+        });
+
+        setTimeout(() => {
+          setPickupModal({ ...pickupModal, isOpen: false, purchaseToPickup: null });
+          loadData();
+        }, 1500);
+      } catch (error: any) {
+        const errorMessage = error.message || 'No se pudo marcar el producto fisico como recogido';
+        
+        setPickupModal({
+          ...pickupModal,
+          isOpen: true,
+          state: 'confirm',
+          title: 'Error',
+          message: errorMessage,
+          type: 'error',
+          onConfirm: () => {
+            setPickupModal({ ...pickupModal, isOpen: false, purchaseToPickup: null });
+          },
+        });
+
+        setTimeout(() => {
+          setPickupModal({ ...pickupModal, isOpen: false, purchaseToPickup: null });
+        }, 3000);
+      }
+    },
+  });
+};
+
   // Obtener categorías únicas
   const categories = useMemo(() => {
     const uniqueCategories = new Map<number, { id: number; name: string }>();
@@ -408,6 +503,18 @@ const handleMarkApartadoAsPickedUp = (apartado: Apartado) => {
     );
   }, [apartados, searchTerm]);
 
+  //Filtrar comprasfisicas
+  const filteredComprasFisicas = useMemo(() => {
+    if (!searchTerm.trim()) return comprasfisicas;
+    
+    const term = searchTerm.toLowerCase();
+    return comprasfisicas.filter(comprafisica =>
+      comprafisica.product.name.toLowerCase().includes(term) ||
+      comprafisica.user.name.toLowerCase().includes(term) ||
+      comprafisica.user.email.toLowerCase().includes(term)
+    );
+  }, [comprasfisicas, searchTerm]);
+
   // Calcular estadísticas
   const stats = useMemo(() => {
     switch (viewMode) {
@@ -429,10 +536,16 @@ const handleMarkApartadoAsPickedUp = (apartado: Apartado) => {
           filtered: filteredApartados.length,
           lowStock: apartados.filter(a => a.status === 'apartado').length,
         };
+      case 'comprasfisicas':
+        return {
+          total: comprasfisicas.length,
+          filtered: filteredComprasFisicas.length,
+          lowStock: comprasfisicas.filter(a => a.status === 'pendiente').length,
+        };
       default:
         return { total: 0, filtered: 0, lowStock: 0 };
     }
-  }, [viewMode, products, filteredProducts, purchases, filteredPurchases, apartados, filteredApartados]);
+  }, [viewMode, products, filteredProducts, purchases, filteredPurchases, apartados, filteredApartados, comprasfisicas, filteredComprasFisicas]);
 
   // Limpiar búsqueda
   const clearSearch = () => {
@@ -440,6 +553,7 @@ const handleMarkApartadoAsPickedUp = (apartado: Apartado) => {
     setSelectedCategory("all");
     setPurchaseStatus('all');
     setApartadoStatus('all');
+    setCompraFisicaStatus('all');
   };
 
   // Obtener el label del filtro activo
@@ -449,6 +563,8 @@ const handleMarkApartadoAsPickedUp = (apartado: Apartado) => {
         return purchaseStatus !== 'all' ? `Estado: ${purchaseStatus}` : null;
       case 'apartados':
         return apartadoStatus !== 'all' ? `Estado: ${apartadoStatus}` : null;
+      case 'comprasfisicas':
+        return compraFisicaStatus !== 'all' ? `Estado: ${compraFisicaStatus}` : null;
       default:
         return selectedCategory !== 'all' 
           ? `Categoría: ${categories.find(c => c.id.toString() === selectedCategory)?.name}`
@@ -490,6 +606,14 @@ const handleMarkApartadoAsPickedUp = (apartado: Apartado) => {
         >
           <CreditCardIcon className="w-5 h-5" />
           Apartados
+        </Button>
+         <Button
+          onClick={() => setViewMode('comprasfisicas')}
+          variant={viewMode === 'comprasfisicas' ? 'primary' : 'secondary'}
+          className="flex items-center gap-2"
+        >
+          <ShoppingBagIcon className="w-5 h-5" />
+          Compras Fisicas
         </Button>
       </div>
 
@@ -575,6 +699,19 @@ const handleMarkApartadoAsPickedUp = (apartado: Apartado) => {
                 <option value="recogido">Recogidos</option>
               </select>
             )}
+
+             {viewMode === 'comprasfisicas' && (
+              <select
+                value={compraFisicaStatus}
+                onChange={(e) => setCompraFisicaStatus(e.target.value as ComprasFisicasstatus | 'all')}
+                className="px-4 py-2.5 border border-line-light rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all min-w-[200px]"
+              >
+                <option value="all">Todos los estados</option>
+                <option value="pendiente">Pendientes</option>
+                <option value="recogido">Recogidos</option>
+                <option value="vencido">Vencidos</option>
+              </select>
+            )}
           </div>
 
           {/* Botón añadir producto (solo en modo productos) */}
@@ -609,6 +746,7 @@ const handleMarkApartadoAsPickedUp = (apartado: Apartado) => {
                     setSelectedCategory("all");
                     setPurchaseStatus('all');
                     setApartadoStatus('all');
+                    setCompraFisicaStatus('all');
                   }}
                   className="hover:bg-primary/20 rounded-full p-0.5"
                 >
@@ -662,6 +800,17 @@ const handleMarkApartadoAsPickedUp = (apartado: Apartado) => {
                 apartados={filteredApartados} 
                 viewMode="apartados"
                 onMarkApartadoAsPickedUp={handleMarkApartadoAsPickedUp}
+              />
+            </>
+          ) : viewMode === 'comprasfisicas' && filteredComprasFisicas.length > 0 ? (
+            <>
+              <div className="mb-4 text-sm text-text-muted">
+                Mostrando {filteredComprasFisicas.length} de {comprasfisicas.length} comprasfisicas
+              </div>
+              <ProductTable 
+                comprasfisicas={filteredComprasFisicas} 
+                viewMode="comprasfisicas"
+                onMarkComprasFisicasPickedUp={handleMarkComprasFisicasAsPickedUp}
               />
             </>
           ) : (

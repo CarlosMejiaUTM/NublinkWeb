@@ -1,24 +1,18 @@
-// FileName: StoreRecommendationsPage.tsx
-// Path: src/pages/store-panel/StoreRecommendationsPage.tsx
-
 import { useEffect, useState } from "react";
-
 import {
   SparklesIcon,
-  FireIcon,
-  RocketLaunchIcon,
-  LightBulbIcon,
   TrophyIcon,
   ExclamationTriangleIcon,
-  ArrowTrendingUpIcon,
+  LightBulbIcon,
+  RocketLaunchIcon,
+  ShoppingCartIcon,
+  StarIcon,
   CheckCircleIcon,
   ArrowRightIcon,
+  FireIcon,
   ChartBarIcon,
-  ShoppingCartIcon,
-  CurrencyDollarIcon,
-  StarIcon,
 } from "@heroicons/react/20/solid";
-import { fetchAIRecommendations, type AIRecommendation } from "../../services/api";
+import { fetchAIRecommendationsstats, type AIRecommendation } from "../../services/api";
 
 const StoreRecommendationsPage = () => {
   const [aiData, setAiData] = useState<AIRecommendation | null>(null);
@@ -30,10 +24,9 @@ const StoreRecommendationsPage = () => {
       try {
         setLoading(true);
         setError(null);
-        const data = await fetchAIRecommendations();
+        const data = await fetchAIRecommendationsstats();
         setAiData(data);
       } catch (err: any) {
-        console.error("Error al cargar recomendaciones:", err);
         setError(err.message || "Error al obtener recomendaciones");
       } finally {
         setLoading(false);
@@ -42,25 +35,45 @@ const StoreRecommendationsPage = () => {
     loadData();
   }, []);
 
-  const getProductName = (product: any) => product.productname || product.product_name || 'Sin nombre';
-  const getQty = (product: any) => product.totalqty || product.total_quantity_sold || 0;
-  const getRevenue = (product: any) => product.totalrevenue || product.total_revenue || 0;
+  const cleanText = (text: string) => {
+    if (!text) return '';
+    return text
+      .replace(/\*\*/g, '')
+      .replace(/###\s*/g, '')
+      .replace(/^\*\s*/gm, '')
+      .replace(/^•\s*/gm, '')
+      .trim();
+  };
+
+  const parseAnalysisLines = (analysis: string | string[]): string[] => {
+    if (Array.isArray(analysis)) {
+      return analysis
+        .map(line => typeof line === 'string' ? cleanText(line) : '')
+        .filter(line => line && line.length > 3 && line !== '**' && line !== '###');
+    }
+    
+    if (typeof analysis === 'string' && analysis.trim()) {
+      return analysis
+        .split('\n')
+        .map(line => cleanText(line))
+        .filter(line => line && line.length > 3 && line !== '**' && line !== '###');
+    }
+    
+    return [];
+  };
 
   if (loading) {
     return (
       <div className="flex flex-col justify-center items-center min-h-[500px]">
         <div className="relative flex items-center justify-center">
           <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-primary"></div>
-          <SparklesIcon
-            className="w-8 h-8 text-primary absolute top-1/2 left-1/2
-                       transform -translate-x-1/2 -translate-y-1/2"
-          />
+          <SparklesIcon className="w-8 h-8 text-primary absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2" />
         </div>
         <p className="text-gray-800 text-2xl font-bold mt-6">
-          Analizando tus Recomendaciones...
+          Generando Recomendaciones Inteligentes...
         </p>
         <p className="text-gray-500 text-sm mt-2">
-          Esto puede tomar hasta 2 minutos
+          Analizando datos de ventas para crear insights personalizados
         </p>
       </div>
     );
@@ -71,7 +84,7 @@ const StoreRecommendationsPage = () => {
       <div className="flex items-center justify-center min-h-[500px]">
         <div className="bg-white border border-red-200 rounded-xl p-8 max-w-md shadow-sm">
           <ExclamationTriangleIcon className="w-14 h-14 text-red-500 mx-auto mb-4" />
-          <h3 className="text-red-700 font-semibold text-lg mb-2 text-center">Error al cargar datos</h3>
+          <h3 className="text-red-700 font-semibold text-lg mb-2 text-center">Error al cargar recomendaciones</h3>
           <p className="text-gray-600 text-center mb-4">{error}</p>
           <button
             onClick={() => window.location.reload()}
@@ -84,51 +97,155 @@ const StoreRecommendationsPage = () => {
     );
   }
 
-  if (!aiData || (!aiData.top_products?.length && !aiData.low_products?.length)) {
+  if (!aiData) {
     return (
       <div className="flex items-center justify-center min-h-[500px]">
         <div className="bg-white border border-gray-200 rounded-xl p-8 max-w-md shadow-sm">
           <LightBulbIcon className="w-14 h-14 text-gray-400 mx-auto mb-4" />
           <h3 className="text-gray-700 font-semibold text-lg mb-2 text-center">Sin datos disponibles</h3>
-          <p className="text-gray-500 text-center">Necesitas más ventas para generar recomendaciones</p>
+          <p className="text-gray-500 text-center">No se pudo generar un análisis para tu tienda</p>
         </div>
       </div>
     );
   }
 
+  const hasTopProducts = aiData.topProducts && aiData.topProducts.length > 0;
+  const hasLowProducts = aiData.lowProducts && aiData.lowProducts.length > 0;
+  const topAnalysisLines = parseAnalysisLines(aiData.aiTopProductAnalysis || []);
+  const lowAnalysisLines = parseAnalysisLines(aiData.aiLowProductAnalysis || []);
+  const hasSummary = aiData.aiSummary && cleanText(aiData.aiSummary).length > 10;
+  const hasTopAnalysis = topAnalysisLines.length > 0;
+  const hasLowAnalysis = lowAnalysisLines.length > 0;
+  const hasAnyData = hasTopProducts || hasLowProducts || hasSummary || hasTopAnalysis || hasLowAnalysis;
+
+  if (!hasAnyData) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-6">
+        <div className="bg-white border border-gray-200 rounded-2xl p-10 max-w-lg shadow-md text-center">
+          <div className="bg-gradient-to-br from-purple-50 to-indigo-50 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6">
+            <SparklesIcon className="w-10 h-10 text-purple-600" />
+          </div>
+          <h3 className="text-gray-900 font-bold text-2xl mb-3">Sin datos aún</h3>
+          <p className="text-gray-600 leading-relaxed mb-6">
+            Aún no hay suficiente información de ventas para generar recomendaciones inteligentes. 
+            Una vez que tu tienda tenga historial de ventas, aquí verás análisis detallados y consejos personalizados.
+          </p>
+          <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+            <p className="text-sm text-blue-800">
+              <strong>💡 Consejo:</strong> Comienza registrando tus ventas para desbloquear insights poderosos sobre tu negocio.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const totalProducts = (aiData.topProducts?.length || 0) + (aiData.lowProducts?.length || 0);
+  const totalInsights = topAnalysisLines.length + lowAnalysisLines.length;
+
   return (
     <div className="space-y-6 p-6 bg-gradient-to-br from-gray-50 to-gray-100 min-h-screen">
       
-      {/* HEADER */}
-      <div className="bg-gradient-to-r from-purple-600 to-indigo-600 rounded-2xl shadow-lg p-8 relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-64 h-64 bg-white opacity-5 rounded-full -mr-32 -mt-32"></div>
-        <div className="absolute bottom-0 left-0 w-48 h-48 bg-white opacity-5 rounded-full -ml-24 -mb-24"></div>
-        <div className="relative flex items-center gap-4">
-          <div className="bg-white/20 backdrop-blur-sm p-4 rounded-xl">
-            <SparklesIcon className="w-8 h-8 text-white" />
-          </div>
-          <div>
-            <h1 className="text-3xl font-bold text-white mb-1">Recomendaciones Inteligentes</h1>
-            <p className="text-purple-100">Insights personalizados para maximizar tus ventas</p>
+      {/* HEADER - Estilo Promocional */}
+      <div className="bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 rounded-2xl shadow-lg p-8 relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-96 h-96 bg-white opacity-10 rounded-full -mr-48 -mt-48"></div>
+        <div className="absolute bottom-0 left-0 w-64 h-64 bg-white opacity-10 rounded-full -ml-32 -mb-32"></div>
+        <div className="absolute top-1/2 right-1/4 w-32 h-32 bg-white opacity-5 rounded-full"></div>
+        
+        <div className="relative">
+          <div className="flex items-start justify-between">
+            <div className="flex items-center gap-4">
+              <div className="bg-white/20 backdrop-blur-sm p-4 rounded-xl">
+                <ChartBarIcon className="w-10 h-10 text-white animate-pulse" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="bg-white text-indigo-600 text-xs font-bold px-3 py-1 rounded-full">
+                    ANÁLISIS AI
+                  </span>
+                </div>
+                <h1 className="text-4xl font-bold text-white mb-2">Recomendaciones Inteligentes</h1>
+                <p className="text-purple-100 text-lg">Insights personalizados para maximizar tus ventas</p>
+              </div>
+            </div>
+            <div className="hidden md:flex flex-col items-end gap-2">
+              <div className="bg-white/20 backdrop-blur-sm px-4 py-2 rounded-lg">
+                <p className="text-white text-sm font-medium">Productos Analizados</p>
+                <p className="text-white text-3xl font-bold">{totalProducts}</p>
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* RESUMEN EJECUTIVO */}
-      {aiData.executive_summary && aiData.executive_summary.trim().length > 0 && (
-        <div className="bg-white rounded-2xl shadow-md border border-gray-200 overflow-hidden hover:shadow-lg transition-shadow">
-          <div className="border-b border-gray-200 px-6 py-5 bg-gradient-to-r from-blue-50 to-indigo-50">
+      {/* Quick Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-2xl shadow-lg p-6 text-white relative overflow-hidden">
+          <div className="absolute top-0 right-0 opacity-10">
+            <TrophyIcon className="w-32 h-32" />
+          </div>
+          <div className="relative">
+            <div className="flex items-center justify-between mb-3">
+              <TrophyIcon className="w-8 h-8" />
+              <span className="text-xs font-bold uppercase tracking-wide">Top Sellers</span>
+            </div>
+            <p className="text-4xl font-bold mb-1">{aiData.topProducts?.length || 0}</p>
+            <p className="text-green-100 text-sm">Productos estrella</p>
+          </div>
+        </div>
+
+        <div className="bg-gradient-to-br from-orange-500 to-red-500 rounded-2xl shadow-lg p-6 text-white relative overflow-hidden">
+          <div className="absolute top-0 right-0 opacity-10">
+            <RocketLaunchIcon className="w-32 h-32" />
+          </div>
+          <div className="relative">
+            <div className="flex items-center justify-between mb-3">
+              <RocketLaunchIcon className="w-8 h-8" />
+              <span className="text-xs font-bold uppercase tracking-wide">Oportunidades</span>
+            </div>
+            <p className="text-4xl font-bold mb-1">{aiData.lowProducts?.length || 0}</p>
+            <p className="text-orange-100 text-sm">Para mejorar</p>
+          </div>
+        </div>
+
+        <div className="bg-gradient-to-br from-purple-500 to-indigo-500 rounded-2xl shadow-lg p-6 text-white relative overflow-hidden">
+          <div className="absolute top-0 right-0 opacity-10">
+            <LightBulbIcon className="w-32 h-32" />
+          </div>
+          <div className="relative">
+            <div className="flex items-center justify-between mb-3">
+              <LightBulbIcon className="w-8 h-8" />
+              <span className="text-xs font-bold uppercase tracking-wide">Insights</span>
+            </div>
+            <p className="text-4xl font-bold mb-1">{totalInsights}</p>
+            <p className="text-purple-100 text-sm">Recomendaciones</p>
+          </div>
+        </div>
+      </div>
+
+      {/* DIAGNÓSTICO DE LA TIENDA */}
+      {hasSummary && (
+        <div className="bg-white rounded-2xl shadow-md border border-gray-200 overflow-hidden">
+          <div className="bg-gradient-to-r from-blue-50 via-indigo-50 to-blue-50 border-b border-blue-200 px-6 py-5">
             <div className="flex items-center gap-3">
-              <div className="bg-blue-100 p-2.5 rounded-full">
-                <LightBulbIcon className="w-6 h-6 text-blue-600" />
+              <div className="bg-blue-500 p-2.5 rounded-xl shadow-md">
+                <LightBulbIcon className="w-6 h-6 text-white" />
               </div>
-              <h2 className="text-xl font-bold text-gray-900">Resumen Ejecutivo</h2>
+              <div>
+                <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                  Diagnóstico General
+                  <span className="bg-blue-500 text-white text-xs font-bold px-2 py-1 rounded-full">
+                    OVERVIEW
+                  </span>
+                </h2>
+                <p className="text-sm text-gray-600">Vista general del rendimiento de tu tienda</p>
+              </div>
             </div>
           </div>
           <div className="p-6">
-            <div className="bg-gradient-to-br from-blue-50/50 to-indigo-50/50 rounded-xl p-5 border border-blue-100">
-              <p className="text-gray-700 leading-relaxed text-base">
-                {aiData.executive_summary}
+            <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-6 border-2 border-blue-200">
+              <p className="text-gray-800 leading-relaxed text-base whitespace-pre-line">
+                {cleanText(aiData.aiSummary)}
               </p>
             </div>
           </div>
@@ -136,260 +253,191 @@ const StoreRecommendationsPage = () => {
       )}
 
       {/* PRODUCTOS ESTRELLA */}
-      {aiData.top_products && aiData.top_products.length > 0 && (
-        <div className="bg-white rounded-2xl shadow-md border border-gray-200 overflow-hidden hover:shadow-lg transition-shadow">
-          <div className="border-b border-gray-200 px-6 py-5 bg-gradient-to-r from-green-50 to-emerald-50">
+      {hasTopProducts && (
+        <div className="bg-white rounded-2xl shadow-md border border-gray-200 overflow-hidden">
+          <div className="bg-gradient-to-r from-green-500 to-emerald-500 px-6 py-5 text-white">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="bg-green-100 p-2.5 rounded-full">
-                  <TrophyIcon className="w-6 h-6 text-green-600" />
+                <div className="bg-white/20 backdrop-blur-sm p-2.5 rounded-full">
+                  <FireIcon className="w-6 h-6 text-white" />
                 </div>
                 <div>
-                  <h2 className="text-xl font-bold text-gray-900">Productos Estrella</h2>
-                  <p className="text-sm text-gray-600">Tus mejores aliados en ventas</p>
+                  <h2 className="text-xl font-bold">Productos Estrella</h2>
+                  <p className="text-sm text-green-100">Tus mejores vendedores - Aprovéchalos al máximo</p>
                 </div>
               </div>
-              <div className="bg-green-100 px-4 py-2 rounded-full">
-                <span className="text-green-700 font-bold text-sm">{aiData.top_products.length} productos</span>
+              <div className="bg-white/20 backdrop-blur-sm px-4 py-2 rounded-full">
+                <span className="font-bold text-sm">{aiData.topProducts.length} productos</span>
               </div>
             </div>
           </div>
           
-          <div className="p-6 space-y-5">
-            {aiData.top_products.map((product, idx) => (
-              <div key={idx} className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl p-5 border-2 border-green-200 hover:border-green-400 transition-all hover:shadow-md">
-                
-                {/* Header del producto */}
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-green-500 to-emerald-600 shadow-md">
-                    <span className="text-white font-bold">{idx + 1}</span>
+          <div className="p-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {aiData.topProducts.map((product, idx) => (
+                <div key={product.id} className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl p-5 border-2 border-green-300 hover:border-green-500 transition-all hover:shadow-lg relative overflow-hidden group">
+                  <div className="absolute top-2 right-2">
+                    <div className="flex items-center gap-1 bg-amber-400 px-3 py-1 rounded-full shadow-md">
+                      <StarIcon className="w-3 h-3 text-amber-900" />
+                      <span className="text-xs font-bold text-amber-900">#{idx + 1}</span>
+                    </div>
                   </div>
-                  <h3 className="font-bold text-gray-900 flex-1 text-lg">{getProductName(product)}</h3>
-                  <div className="flex items-center gap-1 bg-gradient-to-r from-amber-100 to-yellow-100 px-3 py-1.5 rounded-full border border-amber-200">
-                    <StarIcon className="w-4 h-4 text-amber-600" />
-                    <span className="text-xs font-bold text-amber-700">TOP {idx + 1}</span>
+                  
+                  <div className="mb-4">
+                    <div className="w-14 h-14 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl flex items-center justify-center shadow-md mb-3">
+                      <TrophyIcon className="w-8 h-8 text-white" />
+                    </div>
+                    <h3 className="font-bold text-gray-900 text-lg leading-tight mb-1">{product.name}</h3>
+                    <p className="text-xs text-gray-500">Product ID: {product.id}</p>
                   </div>
-                </div>
 
-                {/* Métricas clave */}
-                <div className="grid grid-cols-3 gap-3 mb-4">
-                  <div className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
-                    <div className="flex items-center gap-2 mb-2">
+                  <div className="bg-white rounded-xl p-4 border-2 border-green-200 shadow-sm">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-xs text-gray-600 font-semibold">Ventas Totales</span>
                       <ShoppingCartIcon className="w-4 h-4 text-green-600" />
-                      <p className="text-xs text-gray-500 font-semibold">Unidades</p>
                     </div>
-                    <p className="text-xl font-bold text-gray-900">{getQty(product)}</p>
-                  </div>
-                  <div className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
-                    <div className="flex items-center gap-2 mb-2">
-                      <CurrencyDollarIcon className="w-4 h-4 text-green-600" />
-                      <p className="text-xs text-gray-500 font-semibold">Ingresos</p>
-                    </div>
-                    <p className="text-xl font-bold text-gray-900">${Number(getRevenue(product)).toFixed(2)}</p>
-                  </div>
-                  <div className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
-                    <div className="flex items-center gap-2 mb-2">
-                      <ChartBarIcon className="w-4 h-4 text-green-600" />
-                      <p className="text-xs text-gray-500 font-semibold">Precio Prom.</p>
-                    </div>
-                    <p className="text-xl font-bold text-gray-900">
-                      ${(Number(getRevenue(product)) / Number(getQty(product))).toFixed(2)}
-                    </p>
+                    <p className="text-3xl font-bold text-green-600">{product.total_sold}</p>
+                    <p className="text-xs text-gray-500 mt-1">unidades vendidas</p>
                   </div>
                 </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
-                {/* Comparación vs Global */}
-                {(product.comparison_with_global_avg || product.comparison_vs_global) && (
-                  <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-l-4 border-blue-500 rounded-xl p-4 mb-4 shadow-sm">
-                    <div className="flex items-center gap-2 mb-2">
-                      <ChartBarIcon className="w-5 h-5 text-blue-600" />
-                      <p className="text-xs font-bold text-blue-800 uppercase tracking-wide">Comparación Global</p>
-                    </div>
-                    <p className="text-sm text-blue-800 font-medium">
-                      {product.comparison_with_global_avg || product.comparison_vs_global}
-                    </p>
-                  </div>
-                )}
-
-                {/* Por qué funciona */}
-                {(product.possible_reasons || product.reason_1) && (
-                  <div className="bg-white rounded-xl p-5 border border-gray-200 shadow-sm">
-                    <div className="flex items-center gap-2 mb-4">
-                      <div className="bg-green-100 p-1.5 rounded-lg">
-                        <CheckCircleIcon className="w-5 h-5 text-green-600" />
-                      </div>
-                      <p className="text-sm font-bold text-gray-800">Por qué funciona este producto</p>
-                    </div>
-                    <div className="space-y-2.5">
-                      {product.possible_reasons && Array.isArray(product.possible_reasons) ? (
-                        product.possible_reasons.map((reason, i) => (
-                          <div key={i} className="flex gap-3 items-start bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg p-3.5 border border-green-200">
-                            <CheckCircleIcon className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
-                            <p className="text-sm text-gray-800 leading-relaxed">{reason}</p>
-                          </div>
-                        ))
-                      ) : (
-                        <>
-                          {product.reason_1 && (
-                            <div className="flex gap-3 items-start bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg p-3.5 border border-green-200">
-                              <CheckCircleIcon className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
-                              <p className="text-sm text-gray-800 leading-relaxed">{product.reason_1}</p>
-                            </div>
-                          )}
-                          {product.reason_2 && (
-                            <div className="flex gap-3 items-start bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg p-3.5 border border-green-200">
-                              <CheckCircleIcon className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
-                              <p className="text-sm text-gray-800 leading-relaxed">{product.reason_2}</p>
-                            </div>
-                          )}
-                        </>
-                      )}
-                    </div>
-                  </div>
-                )}
+      {/* ANÁLISIS PRODUCTOS ESTRELLA */}
+      {hasTopAnalysis && (
+        <div className="bg-white rounded-2xl shadow-md border border-gray-200 overflow-hidden">
+          <div className="bg-gradient-to-r from-green-50 via-emerald-50 to-green-50 border-b border-green-200 px-6 py-5">
+            <div className="flex items-center gap-3">
+              <div className="bg-green-500 p-2.5 rounded-xl shadow-md">
+                <CheckCircleIcon className="w-6 h-6 text-white" />
               </div>
-            ))}
+              <div>
+                <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                  {hasTopProducts ? 'Análisis de Éxito' : 'Factores de Éxito'}
+                  <span className="bg-green-500 text-white text-xs font-bold px-2 py-1 rounded-full">
+                    {topAnalysisLines.length}
+                  </span>
+                </h2>
+                <p className="text-sm text-gray-600">
+                  {hasTopProducts ? 'Factores clave que impulsan tus ventas' : 'Marco teórico para productos exitosos'}
+                </p>
+              </div>
+            </div>
+          </div>
+          <div className="p-6">
+            <div className="grid gap-4">
+              {topAnalysisLines.map((line, idx) => (
+                <div key={idx} className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl p-5 border-2 border-green-200 hover:border-green-400 hover:shadow-md transition-all group">
+                  <div className="flex gap-4">
+                    <div className="flex-shrink-0">
+                      <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-emerald-500 text-white rounded-xl flex items-center justify-center text-lg font-bold shadow-md group-hover:scale-110 transition-transform">
+                        {idx + 1}
+                      </div>
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-gray-800 leading-relaxed">{line}</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       )}
 
       {/* OPORTUNIDADES DE MEJORA */}
-      {aiData.low_products && aiData.low_products.length > 0 && (
-        <div className="bg-white rounded-2xl shadow-md border border-gray-200 overflow-hidden hover:shadow-lg transition-shadow">
-          <div className="border-b border-gray-200 px-6 py-5 bg-gradient-to-r from-orange-50 to-amber-50">
+      {hasLowProducts && (
+        <div className="bg-white rounded-2xl shadow-md border border-gray-200 overflow-hidden">
+          <div className="bg-gradient-to-r from-orange-500 to-red-500 px-6 py-5 text-white">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="bg-orange-100 p-2.5 rounded-full">
-                  <RocketLaunchIcon className="w-6 h-6 text-orange-600" />
+                <div className="bg-white/20 backdrop-blur-sm p-2.5 rounded-full">
+                  <RocketLaunchIcon className="w-6 h-6 text-white" />
                 </div>
                 <div>
-                  <h2 className="text-xl font-bold text-gray-900">Oportunidades de Mejora</h2>
-                  <p className="text-sm text-gray-600">Productos con potencial de crecimiento</p>
+                  <h2 className="text-xl font-bold">Oportunidades de Crecimiento</h2>
+                  <p className="text-sm text-orange-100">Productos con potencial para mejorar</p>
                 </div>
               </div>
-              <div className="bg-orange-100 px-4 py-2 rounded-full">
-                <span className="text-orange-700 font-bold text-sm">{aiData.low_products.length} productos</span>
+              <div className="bg-white/20 backdrop-blur-sm px-4 py-2 rounded-full">
+                <span className="font-bold text-sm">{aiData.lowProducts.length} productos</span>
               </div>
             </div>
           </div>
           
-          <div className="p-6 space-y-5">
-            {aiData.low_products.map((product, idx) => (
-              <div key={idx} className="bg-gradient-to-br from-orange-50 to-red-50 rounded-xl p-5 border-2 border-orange-200 hover:border-orange-400 transition-all hover:shadow-md">
-                
-                {/* Header del producto */}
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-orange-500 to-red-600 shadow-md">
-                    <ExclamationTriangleIcon className="w-6 h-6 text-white" />
+          <div className="p-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {aiData.lowProducts.map((product, idx) => (
+                <div key={product.id} className="bg-gradient-to-br from-orange-50 to-red-50 rounded-xl p-5 border-2 border-orange-300 hover:border-orange-500 transition-all hover:shadow-lg relative overflow-hidden group">
+                  <div className="absolute top-2 right-2">
+                    <div className="bg-orange-500 px-3 py-1 rounded-full shadow-md">
+                      <span className="text-xs font-bold text-white">MEJORAR</span>
+                    </div>
                   </div>
-                  <h3 className="font-bold text-gray-900 flex-1 text-lg">{getProductName(product)}</h3>
-                  <div className="bg-gradient-to-r from-orange-100 to-red-100 px-3 py-1.5 rounded-full border border-orange-200">
-                    <span className="text-xs font-bold text-orange-700">ATENCIÓN</span>
+                  
+                  <div className="mb-4">
+                    <div className="w-14 h-14 bg-gradient-to-br from-orange-500 to-red-600 rounded-xl flex items-center justify-center shadow-md mb-3">
+                      <ExclamationTriangleIcon className="w-8 h-8 text-white" />
+                    </div>
+                    <h3 className="font-bold text-gray-900 text-lg leading-tight mb-1">{product.name}</h3>
+                    <p className="text-xs text-gray-500">Product ID: {product.id}</p>
                   </div>
-                </div>
 
-                {/* Métricas actuales */}
-                <div className="grid grid-cols-3 gap-3 mb-4">
-                  <div className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
-                    <div className="flex items-center gap-2 mb-2">
+                  <div className="bg-white rounded-xl p-4 border-2 border-orange-200 shadow-sm">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-xs text-gray-600 font-semibold">Ventas Totales</span>
                       <ShoppingCartIcon className="w-4 h-4 text-orange-600" />
-                      <p className="text-xs text-gray-500 font-semibold">Unidades</p>
                     </div>
-                    <p className="text-xl font-bold text-gray-900">{getQty(product)}</p>
-                  </div>
-                  <div className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
-                    <div className="flex items-center gap-2 mb-2">
-                      <CurrencyDollarIcon className="w-4 h-4 text-orange-600" />
-                      <p className="text-xs text-gray-500 font-semibold">Ingresos</p>
-                    </div>
-                    <p className="text-xl font-bold text-gray-900">${Number(getRevenue(product)).toFixed(2)}</p>
-                  </div>
-                  <div className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
-                    <div className="flex items-center gap-2 mb-2">
-                      <ChartBarIcon className="w-4 h-4 text-orange-600" />
-                      <p className="text-xs text-gray-500 font-semibold">Precio Prom.</p>
-                    </div>
-                    <p className="text-xl font-bold text-gray-900">
-                      ${(Number(getRevenue(product)) / Number(getQty(product))).toFixed(2)}
-                    </p>
+                    <p className="text-3xl font-bold text-orange-600">{product.total_sold}</p>
+                    <p className="text-xs text-gray-500 mt-1">unidades vendidas</p>
                   </div>
                 </div>
-
-                {/* Situación actual */}
-                {(product.comparison_with_global_avg || product.comparison_vs_global) && (
-                  <div className="bg-gradient-to-r from-red-50 to-orange-50 border-l-4 border-red-500 rounded-xl p-4 mb-4 shadow-sm">
-                    <div className="flex items-center gap-2 mb-2">
-                      <ExclamationTriangleIcon className="w-5 h-5 text-red-600" />
-                      <p className="text-xs font-bold text-red-800 uppercase tracking-wide">Situación Actual</p>
-                    </div>
-                    <p className="text-sm text-red-800 font-medium">
-                      {product.comparison_with_global_avg || product.comparison_vs_global}
-                    </p>
-                  </div>
-                )}
-
-                {/* Plan de acción */}
-                {(product.recommended_actions || product.recommended_action_1 || product.action_1) && (
-                  <div className="bg-white rounded-xl p-5 border border-gray-200 shadow-sm">
-                    <div className="flex items-center gap-2 mb-4">
-                      <div className="bg-orange-100 p-1.5 rounded-lg">
-                        <ArrowRightIcon className="w-5 h-5 text-orange-600" />
-                      </div>
-                      <p className="text-sm font-bold text-gray-800">Plan de Acción Recomendado</p>
-                    </div>
-                    <div className="space-y-2.5">
-                      {product.recommended_actions && Array.isArray(product.recommended_actions) ? (
-                        product.recommended_actions.map((action, i) => (
-                          <div key={i} className="flex gap-3 items-start bg-gradient-to-r from-orange-50 to-amber-50 rounded-lg p-3.5 border border-orange-200">
-                            <ArrowRightIcon className="w-5 h-5 text-orange-600 flex-shrink-0 mt-0.5" />
-                            <p className="text-sm text-gray-800 font-medium leading-relaxed">{action}</p>
-                          </div>
-                        ))
-                      ) : (
-                        <>
-                          {(product.recommended_action_1 || product.action_1) && (
-                            <div className="flex gap-3 items-start bg-gradient-to-r from-orange-50 to-amber-50 rounded-lg p-3.5 border border-orange-200">
-                              <ArrowRightIcon className="w-5 h-5 text-orange-600 flex-shrink-0 mt-0.5" />
-                              <p className="text-sm text-gray-800 font-medium leading-relaxed">
-                                {product.recommended_action_1 || product.action_1}
-                              </p>
-                            </div>
-                          )}
-                          {(product.recommended_action_2 || product.action_2) && (
-                            <div className="flex gap-3 items-start bg-gradient-to-r from-orange-50 to-amber-50 rounded-lg p-3.5 border border-orange-200">
-                              <ArrowRightIcon className="w-5 h-5 text-orange-600 flex-shrink-0 mt-0.5" />
-                              <p className="text-sm text-gray-800 font-medium leading-relaxed">
-                                {product.recommended_action_2 || product.action_2}
-                              </p>
-                            </div>
-                          )}
-                        </>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         </div>
       )}
 
-      {/* RECOMENDACIONES GENERALES */}
-      {aiData.recommendations && aiData.recommendations.trim().length > 0 && (
-        <div className="bg-white rounded-2xl shadow-md border border-gray-200 overflow-hidden hover:shadow-lg transition-shadow">
-          <div className="border-b border-gray-200 px-6 py-5 bg-gradient-to-r from-indigo-50 to-purple-50">
+      {/* ANÁLISIS BAJO RENDIMIENTO */}
+      {hasLowAnalysis && (
+        <div className="bg-white rounded-2xl shadow-md border border-gray-200 overflow-hidden">
+          <div className="bg-gradient-to-r from-orange-50 via-red-50 to-orange-50 border-b border-orange-200 px-6 py-5">
             <div className="flex items-center gap-3">
-              <div className="bg-indigo-100 p-2.5 rounded-full">
-                <LightBulbIcon className="w-6 h-6 text-indigo-600" />
+              <div className="bg-orange-500 p-2.5 rounded-xl shadow-md">
+                <ArrowRightIcon className="w-6 h-6 text-white" />
               </div>
-              <h2 className="text-xl font-bold text-gray-900">Recomendaciones Generales</h2>
+              <div>
+                <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                  {hasLowProducts ? 'Plan de Acción' : 'Diagnóstico Común'}
+                  <span className="bg-orange-500 text-white text-xs font-bold px-2 py-1 rounded-full">
+                    {lowAnalysisLines.length}
+                  </span>
+                </h2>
+                <p className="text-sm text-gray-600">
+                  {hasLowProducts ? 'Estrategias para impulsar el rendimiento' : 'Causas comunes de bajo rendimiento'}
+                </p>
+              </div>
             </div>
           </div>
           <div className="p-6">
-            <div className="bg-gradient-to-br from-indigo-50/50 to-purple-50/50 rounded-xl p-5 border border-indigo-100">
-              <p className="text-gray-700 leading-relaxed text-base">
-                {aiData.recommendations}
-              </p>
+            <div className="grid gap-4">
+              {lowAnalysisLines.map((line, idx) => (
+                <div key={idx} className="bg-gradient-to-r from-orange-50 to-red-50 rounded-xl p-5 border-2 border-orange-200 hover:border-orange-400 hover:shadow-md transition-all group">
+                  <div className="flex gap-4">
+                    <div className="flex-shrink-0">
+                      <div className="w-10 h-10 bg-gradient-to-br from-orange-500 to-red-500 text-white rounded-xl flex items-center justify-center text-lg font-bold shadow-md group-hover:scale-110 transition-transform">
+                        {idx + 1}
+                      </div>
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-gray-800 leading-relaxed">{line}</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         </div>

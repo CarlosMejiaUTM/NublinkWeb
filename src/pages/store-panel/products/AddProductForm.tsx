@@ -46,7 +46,8 @@ const AddProductForm: React.FC<AddProductFormProps> = ({ onClose, onSubmit }) =>
   const [categories, setCategories] = useState<ProductCategory[]>([]);
   const [loadingCategories, setLoadingCategories] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
-
+  const [categorySearch, setCategorySearch] = useState("");
+  const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
   // Estados para crear nueva categoría
   const [showNewCategory, setShowNewCategory] = useState(false);
   const [newCategoryData, setNewCategoryData] = useState({
@@ -73,6 +74,20 @@ const AddProductForm: React.FC<AddProductFormProps> = ({ onClose, onSubmit }) =>
     }
   };
 
+  // Después de la línea 73 (después del useEffect de loadCategories)
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (!target.closest('.relative')) {
+        setShowCategoryDropdown(false);
+      }
+    };
+  
+  if (showCategoryDropdown) {
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }
+}, [showCategoryDropdown]);
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
   ) => {
@@ -187,6 +202,11 @@ const AddProductForm: React.FC<AddProductFormProps> = ({ onClose, onSubmit }) =>
     { value: "", label: "Seleccionar categoría" },
     ...categories.map((cat) => ({ value: cat.id.toString(), label: cat.name })),
   ];
+
+  // Después de la línea 208 (antes del return)
+  const filteredCategories = categories.filter(cat =>
+    cat.name.toLowerCase().includes(categorySearch.toLowerCase())
+  );
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
@@ -377,16 +397,66 @@ const AddProductForm: React.FC<AddProductFormProps> = ({ onClose, onSubmit }) =>
                     </div>
                   </Card>
                 )}
-
-                <Select
-                  id="categoryId"
-                  name="categoryId"
-                  options={categoryOptions}
-                  value={formData.categoryId}
-                  onChange={handleInputChange}
-                  error={errors.categoryId}
-                  disabled={isSubmitting || loadingCategories}
-                />
+              <div className="relative">
+                <div className="relative">
+                  <input
+                    type="text"
+                    placeholder="Buscar o seleccionar categoría..."
+                    value={
+                      formData.categoryId
+                        ? categories.find(c => c.id.toString() === formData.categoryId)?.name || categorySearch
+                        : categorySearch
+                    }
+                    onChange={(e) => {
+                      setCategorySearch(e.target.value);
+                      setFormData(prev => ({ ...prev, categoryId: "" }));
+                      setShowCategoryDropdown(true);
+                    }}
+                    onFocus={() => setShowCategoryDropdown(true)}
+                    className={`w-full pl-10 pr-4 py-2 border ${
+                      errors.categoryId ? 'border-red-500' : 'border-line-light'
+                    } rounded-lg focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed`}
+                    disabled={isSubmitting || loadingCategories}
+                  />
+                  <Squares2X2Icon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-text-muted" />
+                </div>
+                  
+                {/* Dropdown */}
+                {showCategoryDropdown && !isSubmitting && !loadingCategories && (
+                  <div className="absolute z-10 w-full mt-1 bg-white border border-line-light rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                    {filteredCategories.length > 0 ? (
+                      filteredCategories.map((cat) => (
+                        <button
+                          key={cat.id}
+                          type="button"
+                          onClick={() => {
+                            setFormData(prev => ({ ...prev, categoryId: cat.id.toString() }));
+                            setCategorySearch("");
+                            setShowCategoryDropdown(false);
+                            if (errors.categoryId) setErrors(prev => ({ ...prev, categoryId: "" }));
+                          }}
+                          className={`w-full text-left px-4 py-2 hover:bg-secondary transition-colors ${
+                            formData.categoryId === cat.id.toString() ? 'bg-primary/10 text-primary' : ''
+                          }`}
+                        >
+                          <div className="font-medium">{cat.name}</div>
+                          {cat.description && (
+                            <div className="text-xs text-text-muted">{cat.description}</div>
+                          )}
+                        </button>
+                      ))
+                    ) : (
+                      <div className="px-4 py-3 text-sm text-text-muted text-center">
+                        No se encontraron categorías
+                      </div>
+                    )}
+                  </div>
+                )}
+              
+                {errors.categoryId && (
+                  <p className="text-red-500 text-xs mt-1">{errors.categoryId}</p>
+                )}
+              </div>
               </div>
 
               {/* Descripción */}
