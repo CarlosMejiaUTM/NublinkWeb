@@ -17,6 +17,7 @@ import {
   getAdminRejectedStores,
   approveStore,
   rejectStore,
+  // deleteStore, // Evitamos hard-delete para prevenir error 500
   getCategories,
 } from '../../services/api/admin';
 
@@ -24,7 +25,9 @@ import {
   CheckIcon,
   XMarkIcon,
   EyeIcon,
-  MagnifyingGlassIcon
+  MagnifyingGlassIcon,
+  TrashIcon,
+  ArrowPathIcon // ✅ NUEVO: Icono para reactivar
 } from '@heroicons/react/20/solid';
 
 /* ============================================================
@@ -84,7 +87,7 @@ const AdminStoresPage = () => {
   // --- Modal ---
   const [modalOpen, setModalOpen] = useState(false);
   const [modalState, setModalState] = useState<'confirm' | 'loading' | 'success'>('confirm');
-  const [modalAction, setModalAction] = useState<'approve' | 'reject' | null>(null);
+  const [modalAction, setModalAction] = useState<'approve' | 'reject' | 'delete' | null>(null);
   const [selectedStoreId, setSelectedStoreId] = useState<number | null>(null);
 
   // --- Toast system ---
@@ -161,7 +164,7 @@ const AdminStoresPage = () => {
   /* ============================================================
      ⚙️ Modal de confirmación
      ============================================================ */
-  const openConfirmModal = (action: 'approve' | 'reject', storeId: number) => {
+  const openConfirmModal = (action: 'approve' | 'reject' | 'delete', storeId: number) => {
     setSelectedStoreId(storeId);
     setModalAction(action);
     setModalState('confirm');
@@ -176,14 +179,20 @@ const AdminStoresPage = () => {
 
     try {
       if (modalAction === 'approve') {
+        // Sirve tanto para aprobar pendientes como para reactivar rechazadas
         await approveStore(selectedStoreId.toString());
-        push("Tienda aprobada correctamente", "success");
-      } else {
+        push("Tienda aprobada/activada correctamente", "success");
+      } 
+      else if (modalAction === 'reject') {
         await rejectStore(selectedStoreId.toString());
         push("Tienda rechazada correctamente", "success");
+      } 
+      else if (modalAction === 'delete') {
+        // Soft Delete (Rechazar) para evitar Error 500
+        await rejectStore(selectedStoreId.toString());
+        push("Tienda desactivada correctamente", "success");
       }
 
-      // 🔁 Actualizar lista
       setStores(prev => prev.filter(s => s.id !== selectedStoreId));
       setModalState('success');
       setTimeout(() => setModalOpen(false), 1500);
@@ -194,6 +203,31 @@ const AdminStoresPage = () => {
     } finally {
       setLoadingStoreId(null);
     }
+  };
+
+  /* ============================================================
+     ✨ UX: Textos Dinámicos del Modal
+     ============================================================ */
+  const getModalTitle = () => {
+    if (modalState === 'success') return 'Acción completada';
+    if (modalAction === 'delete') return 'Desactivar Tienda';
+    if (modalAction === 'reject') return 'Rechazar Tienda';
+    
+    // UX: Si estamos en rechazados y damos aprobar, es "Reactivar"
+    if (modalAction === 'approve' && activeTab === 'rejected') return 'Reactivar Tienda';
+    return 'Confirmar Aprobación';
+  };
+
+  const getModalMessage = () => {
+    if (modalState === 'success') return 'La operación se realizó con éxito.';
+    if (modalAction === 'delete') return '¿Estás seguro de desactivar esta tienda? Pasará a estado rechazado.';
+    if (modalAction === 'reject') return '¿Deseas rechazar la solicitud de esta tienda?';
+    
+    // UX: Mensaje específico para reactivación
+    if (modalAction === 'approve' && activeTab === 'rejected') {
+        return 'Esta tienda fue rechazada anteriormente. ¿Estás seguro de que deseas reactivarla y aprobarla nuevamente?';
+    }
+    return '¿La información es correcta y deseas aprobar esta tienda?';
   };
 
   /* ============================================================
@@ -248,32 +282,64 @@ const AdminStoresPage = () => {
                       {store.status}
                     </span>
                   </td>
-                  <td className="p-4 text-right space-x-2">
+                  <td className="p-4 text-right flex justify-end items-center gap-2">
+                    {/* Ver Detalles */}
                     <Link to={`/admin/tienda/${store.id}`}>
-                      <Button variant="ghost" size="sm" className="text-primary hover:bg-primary-light">
+                      <Button variant="ghost" size="sm" className="text-primary hover:bg-primary-light" title="Ver detalles">
                         <EyeIcon className="w-4 h-4" />
-                        <span>Ver</span>
                       </Button>
                     </Link>
+
+                    {/* ✅ BOTÓN REACTIVAR (Solo en Rechazadas) */}
+                    {activeTab === 'rejected' && (
+                        <Button
+                            size="sm"
+                            className="bg-green-100 text-green-700 hover:bg-green-200 border border-green-200"
+                            onClick={() => openConfirmModal('approve', store.id)}
+                            disabled={isCurrentLoading}
+                            title="Reactivar / Aprobar de nuevo"
+                        >
+                            <ArrowPathIcon className="w-4 h-4" />
+                        </Button>
+                    )}
+
+                    {/* ✅ BOTÓN ELIMINAR (Solo en Aprobadas y Pendientes) 
+                        En rechazadas no tiene sentido "rechazar de nuevo" visualmente 
+                    */}
+                    {activeTab !== 'rejected' && (
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-red-500 hover:bg-red-50 hover:text-red-700"
+                            onClick={() => openConfirmModal('delete', store.id)}
+                            disabled={isCurrentLoading}
+                            title="Desactivar tienda"
+                        >
+                            <TrashIcon className="w-4 h-4" />
+                        </Button>
+                    )}
+
+                    {/* Acciones exclusivas de Pendientes */}
                     {activeTab === 'pending' && (
                       <>
                         <Button
                           size="sm"
-                          className="bg-green-600 hover:bg-green-700 text-white"
+                          className="bg-green-600 hover:bg-green-700 text-white ml-2"
                           onClick={() => openConfirmModal('approve', store.id)}
                           disabled={isCurrentLoading}
+                          title="Aprobar solicitud"
                         >
                           <CheckIcon className="w-4 h-4" />
-                          <span>{isCurrentLoading ? '...' : 'Aprobar'}</span>
                         </Button>
                         <Button
                           variant="danger"
                           size="sm"
+                          className="ml-2"
                           onClick={() => openConfirmModal('reject', store.id)}
                           disabled={isCurrentLoading}
+                          title="Rechazar solicitud"
                         >
                           <XMarkIcon className="w-4 h-4" />
-                          <span>{isCurrentLoading ? '...' : 'Rechazar'}</span>
                         </Button>
                       </>
                     )}
@@ -304,7 +370,7 @@ const AdminStoresPage = () => {
         <div className="relative w-full md:w-80">
           <Input
             id="searchStore"
-            placeholder="Buscar por nombre de tienda o propietario..."
+            placeholder="Buscar por nombre..."
             className="pl-10 !py-2"
             containerClassName="mb-0"
             icon={<MagnifyingGlassIcon />}
@@ -351,28 +417,21 @@ const AdminStoresPage = () => {
       {/* --- MODAL --- */}
       <ConfirmModal
         isOpen={modalOpen}
-        title={
-          modalState === 'success'
-            ? 'Acción completada'
-            : modalAction === 'approve'
-            ? 'Confirmar aprobación'
-            : 'Confirmar rechazo'
+        title={getModalTitle()}
+        message={getModalMessage()}
+        confirmText={
+            // UX: Cambia el texto del botón según la acción
+            modalAction === 'delete' ? "Sí, desactivar" : 
+            (modalAction === 'approve' && activeTab === 'rejected') ? "Sí, Reactivar" : 
+            "Confirmar"
         }
-        message={
-          modalState === 'success'
-            ? 'La acción se completó exitosamente.'
-            : modalAction === 'approve'
-            ? '¿Seguro que deseas aprobar esta tienda?'
-            : '¿Seguro que deseas rechazar esta tienda?'
-        }
-        confirmText="Confirmar"
         cancelText="Cancelar"
         onConfirm={handleConfirmAction}
         onCancel={() => setModalOpen(false)}
         state={modalState}
+        variant={modalAction === 'delete' || modalAction === 'reject' ? 'danger' : 'primary'}
       />
 
-      {/* --- TOASTS --- */}
       <ToastsContainer toasts={toasts} />
     </>
   );

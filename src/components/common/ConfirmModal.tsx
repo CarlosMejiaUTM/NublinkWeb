@@ -13,7 +13,10 @@ interface ConfirmModalProps {
   type?: "confirm" | "success" | "error" | "loading";
   onConfirm?: () => void;
   onCancel?: () => void;
-  state: "confirm" | "success"; // ✅ Maneja estados principales
+  // Actualizado para soportar loading y error que se usan en AdminStores
+  state?: "confirm" | "success" | "loading" | "error"; 
+  // Nuevo: para diferenciar acciones normales (azul) de peligrosas (rojo)
+  variant?: "primary" | "danger"; 
 }
 
 const ConfirmModal: React.FC<ConfirmModalProps> = ({
@@ -25,13 +28,13 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
   type,
   onConfirm,
   onCancel,
-  state,
+  state = "confirm",
+  variant = "primary", // Por defecto es azul
 }) => {
   const [show, setShow] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
-      // 🔹 Pequeño delay para activar la animación de entrada
       const t = setTimeout(() => setShow(true), 10);
       return () => clearTimeout(t);
     } else {
@@ -41,8 +44,11 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
 
   if (!isOpen) return null;
 
-  // ✅ Si no se pasa un "type" manualmente, lo definimos según el estado
-  const effectiveType = type || (state === "success" ? "success" : "confirm");
+  // Lógica para determinar el tipo visual
+  const effectiveType = type || (state === "success" ? "success" : state === "loading" ? "loading" : "confirm");
+  
+  // Detectar si es una acción peligrosa
+  const isDanger = variant === "danger";
 
   const LoadingSpinner = () => (
     <div className="flex justify-center">
@@ -51,7 +57,8 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
   );
 
   const iconMap = {
-    confirm: <ExclamationTriangleIcon className="w-20 h-20 text-yellow-500" />,
+    // Si es danger, usamos rojo, si no, amarillo
+    confirm: <ExclamationTriangleIcon className={`w-20 h-20 ${isDanger ? 'text-red-500' : 'text-yellow-500'}`} />,
     success: <CheckCircleIcon className="w-20 h-20 text-green-500" />,
     error: <ExclamationTriangleIcon className="w-20 h-20 text-red-500" />,
     loading: <LoadingSpinner />,
@@ -107,7 +114,11 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
             </button>
             <button
               onClick={onConfirm}
-              className="px-4 py-2 rounded-lg bg-primary text-white hover:bg-primary-dark transition"
+              className={`px-4 py-2 rounded-lg text-white transition ${
+                isDanger 
+                  ? "bg-red-600 hover:bg-red-700" 
+                  : "bg-primary hover:bg-primary-dark"
+              }`}
             >
               {confirmText}
             </button>
