@@ -1,10 +1,6 @@
-<<<<<<< Updated upstream
-// ...existing code...
-=======
 // File: src/pages/Landing.tsx
 // Versión: PREMIUM 2025 - Nublink Landing Page (Sin opción gratuita)
 
->>>>>>> Stashed changes
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, useScroll, useTransform, AnimatePresence } from 'framer-motion';
@@ -26,13 +22,6 @@ import {
   XMarkIcon,
 } from '@heroicons/react/24/solid';
 
-<<<<<<< Updated upstream
-
-// -------------------------------------------------------------
-// 🔹 HEADER
-// -------------------------------------------------------------
-=======
->>>>>>> Stashed changes
 const Header = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -139,28 +128,10 @@ const Header = () => {
   );
 };
 
-<<<<<<< Updated upstream
-
-// -------------------------------------------------------------
-// 🔹 HERO SECTION
-// -------------------------------------------------------------
-const HeroSection = () => (
-  <section className="relative h-screen flex items-center justify-center text-center overflow-hidden">
-    {/* Fondo */}
-    <div className="absolute inset-0">
-      <img
-        src={heroBg}
-        alt="Interior de tienda moderna"
-        className="w-full h-full object-cover brightness-[0.55] saturate-110 contrast-110 scale-105 transition-transform duration-[3000ms]"
-      />
-      <div className="absolute inset-0 bg-gradient-to-br from-black/70 via-black/60 to-primary/40"></div>
-    </div>
-=======
 const HeroSection = () => {
   const { scrollY } = useScroll();
   const y = useTransform(scrollY, [0, 500], [0, 150]);
   const opacity = useTransform(scrollY, [0, 300], [1, 0]);
->>>>>>> Stashed changes
 
   return (
     <section className="relative h-screen flex items-center justify-center overflow-hidden">
